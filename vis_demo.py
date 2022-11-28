@@ -5,13 +5,9 @@ from models import build_model
 from main import get_args_parser
 import torch
 import numpy as np
-from util.misc import (NestedTensor, nested_tensor_from_tensor_list,
-                       accuracy, get_world_size, interpolate,
-                       is_dist_avail_and_initialized)
-from PIL import Image,ImageDraw
+from PIL import Image
 import itertools
 import util.misc as utils
-from torchvision import transforms 
 from datasets.vcoco import make_vcoco_transforms
 import pandas as pd
 from index2cat import vcoco_index_2_cat, hico_index_2_cat, vaw_index_2_cat
@@ -93,7 +89,10 @@ def index_2_cat(index,inf_type):
     elif inf_type =='vaw':
         return vaw_index_2_cat(index)
 
-    
+def make_color_dict(class_num):
+    color_dict = {i: list(np.random.random(size=3) * 256) for i in range(class_num)}
+    return color_dict 
+
 
 def draw_img(img, output_i, top_k, threshold, color_dict, inf_type):
     #import pdb; pdb.set_trace()
@@ -138,7 +137,7 @@ def draw_img(img, output_i, top_k, threshold, color_dict, inf_type):
                     text_box = [o_bbox[0], o_bbox[1]-cnt*text_size_y, o_bbox[0]+text_size[0],o_bbox[1]-(cnt-1)*text_size_y]
 
                     #draw text
-                    vis_img = cv2.rectangle(vis_img, (int(text_box[0]),int(text_box[1])),(int(text_box[2]),int(text_box[3])), color_dict['object'][0], -1)
+                    vis_img = cv2.rectangle(vis_img, (int(text_box[0]),int(text_box[1])),(int(text_box[2]),int(text_box[3])), color_dict[int(o_class)], -1)
                     vis_img = cv2.putText(vis_img, text, (int(text_box[0]),int(text_box[3])),cv2.FONT_HERSHEY_SIMPLEX,1,(255,255,255),2,cv2.LINE_AA,False)
                     print(f'drawing attribute box : {text}, {cnt}')
                     cnt += 1 
@@ -170,10 +169,11 @@ def draw_img(img, output_i, top_k, threshold, color_dict, inf_type):
                 s_bbox = action['subject_box']
                 o_bbox = action['object_box']
                 o_class = action['object_id']
-                vis_img = cv2.rectangle(vis_img, (int(s_bbox[0]),int(s_bbox[1])), (int(s_bbox[2]),int(s_bbox[3])), color_dict['subject'][0], 3)
+                #import pdb; pdb.set_trace()
+                vis_img = cv2.rectangle(vis_img, (int(s_bbox[0]),int(s_bbox[1])), (int(s_bbox[2]),int(s_bbox[3])), color_dict[0], 3)
                 print('drawing subject box')
                 
-                vis_img = cv2.rectangle(vis_img, (int(o_bbox[0]),int(o_bbox[1])), (int(o_bbox[2]),int(o_bbox[3])), color_dict['object'][0], 3)
+                vis_img = cv2.rectangle(vis_img, (int(o_bbox[0]),int(o_bbox[1])), (int(o_bbox[2]),int(o_bbox[3])), color_dict[int(o_class)], 3)
                 print('drawing object box')
 
                 text_size, BaseLine=cv2.getTextSize(index_2_cat(verbs[0][0],args.inf_type),cv2.FONT_HERSHEY_SIMPLEX,1,2)
@@ -190,26 +190,15 @@ def draw_img(img, output_i, top_k, threshold, color_dict, inf_type):
                     text_box = [s_bbox[0], s_bbox[1]-cnt*text_size_y, s_bbox[0]+text_size[0],s_bbox[1]-(cnt-1)*text_size_y]
 
                     #draw text
-                    vis_img = cv2.rectangle(vis_img, (int(text_box[0]),int(text_box[1])),(int(text_box[2]),int(text_box[3])), color_dict['subject'][0], -1)
+                    vis_img = cv2.rectangle(vis_img, (int(text_box[0]),int(text_box[1])),(int(text_box[2]),int(text_box[3])), color_dict[int(o_class)], -1)
                     vis_img = cv2.putText(vis_img, text, (int(text_box[0]),int(text_box[3])),cv2.FONT_HERSHEY_SIMPLEX,1,(255,255,255),2,cv2.LINE_AA,False)
                     print(f'drawing action box : {text}, {cnt}')
                     cnt += 1 
     return vis_img
 
-def make_color_dict(top_k):
-    color_dict = {}
-    color_dict['subject'] = []
-    color_dict['object'] = []
-    for _ in range(args.top_k):
-        color_dict['subject'].append(list(np.random.random(size=3) * 256))
-        color_dict['object'].append(list(np.random.random(size=3) * 256))
-    return color_dict 
-
 if __name__ == '__main__':
-    #import pdb; pdb.set_trace()
     parser = argparse.ArgumentParser('video inference script', parents=[get_args_parser()])
     args = parser.parse_args()
-    #import pdb; pdb.set_trace()
     video_path = args.video_file
     assert os.path.isfile(video_path), "check video file is in video path"
     cap = cv2.VideoCapture(video_path)
@@ -218,16 +207,14 @@ if __name__ == '__main__':
     frame_size = (frame_width, frame_height)
     fourcc = cv2.VideoWriter_fourcc(*'XVID')
     orig_size = torch.as_tensor([frame_height,frame_width]).unsqueeze(0).to('cuda')
-    
     fps = 30.0
     args.output_dir = 'output_video/'+video_path.split('/')[-1]
-    #import pdb; pdb.set_trace()
     output_file = cv2.VideoWriter(args.output_dir, fourcc, fps, frame_size)
     model, _, postprocessors = build_model(args) #model, criterion, postprocessors
     checkpoint = torch.load(args.checkpoint, map_location='cpu')
     model.load_state_dict(checkpoint['model'],strict=False)
     frame_num = 0
-    color_dict = make_color_dict(args.top_k)
+    color_dict = make_color_dict(args.num_obj_classes)
     while(True):
         retval, frame = cap.read() 
         print(f'frame_num : {frame_num}')

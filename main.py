@@ -265,7 +265,6 @@ def main(args):
         model_without_ddp = model.module
     n_parameters = sum(p.numel() for p in model.parameters() if p.requires_grad)
     print('number of params:', n_parameters)
-
     param_dicts = [
         {"params": [p for n, p in model_without_ddp.named_parameters() if "backbone" not in n and p.requires_grad]},
         {
@@ -311,9 +310,12 @@ def main(args):
         if args.hoi or args.att_det or args.mtl:
             if args.mtl:
                 for dlv in data_loader_val:
-                    #import pdb; pdb.set_trace()
                     test_stats,dataset_name = evaluate_hoi_att(args.dataset_file, model, postprocessors, dlv, args.subject_category_id, device, args)
                     if 'v-coco' in dataset_name:
+                        log_stats = {**{f'test_{k}': v for k, v in test_stats.items()}}
+                        if args.output_dir:
+                            with (output_dir / "log.txt").open("a") as f:
+                                f.write(json.dumps(log_stats) + "\n")
                         if utils.get_rank() == 0 and args.wandb:
                     
                             wandb.log({
@@ -322,6 +324,10 @@ def main(args):
                             })
                         performance=test_stats['mAP_thesis']
                     elif 'hico' in dataset_name:
+                        log_stats = {**{f'test_{k}': v for k, v in test_stats.items()}}
+                        if args.output_dir:
+                            with (output_dir / "log.txt").open("a") as f:
+                                f.write(json.dumps(log_stats) + "\n")
                         if utils.get_rank() == 0 and args.wandb:
                             wandb.log({
                                 'mAP': test_stats['mAP'],
@@ -331,6 +337,10 @@ def main(args):
                             })
                         performance=test_stats['mAP']
                     elif 'vaw' in dataset_name:
+                        log_stats = {**{f'test_{k}': v for k, v in test_stats.items()}}
+                        if args.output_dir:
+                            with (output_dir / "log.txt").open("a") as f:
+                                f.write(json.dumps(log_stats) + "\n")
                         if utils.get_rank() == 0 and args.wandb:
                             wandb.log({
                                 'mAP': test_stats['mAP'],

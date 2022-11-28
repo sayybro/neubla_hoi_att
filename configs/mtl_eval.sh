@@ -6,10 +6,11 @@ EXP_DIR=logs_run_001
 PY_ARGS=${@:1}
 
 python -u main.py \
-    --pretrained checkpoints/hoi_vaw/checkpoint.pth \
+    --pretrained checkpoints/mtl_all/checkpoint.pth \
     --mtl \
     --update_obj_att \
     --dataset_file vaw \
+    --mtl_data [\'vcoco\',\'hico\',\'vaw\'] \
     --data_path data/vaw \
     --num_obj_att_classes 80 \
     --num_obj_classes 81 \
