@@ -142,7 +142,7 @@ CUDA_VISIBLE_DEVICES=1,2 GPUS_PER_NODE=2 ./tool/run_dist_launch.sh 2 configs/mtl
 ```
 configs/mtl_eval.sh \ 
         --pretrained checkpoints/mtl_all/checkpoint.pth \
-        --output_dir checkpoints/mtl_all/test/ \
+        --output_dir test_results/ \
         --mtl_data [\'vcoco\',\'hico\',\'vaw\']
 ```
 
