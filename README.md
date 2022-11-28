@@ -1,6 +1,6 @@
 # Training
 
-## For single task training.
+## For single task training
 ```
 CUDA_VISIBLE_DEVICES=1,2 GPUS_PER_NODE=2 ./tool/run_dist_launch.sh 2 configs/mtl_train.sh \
         --mtl_data [\'vaw\'] \
@@ -8,7 +8,7 @@ CUDA_VISIBLE_DEVICES=1,2 GPUS_PER_NODE=2 ./tool/run_dist_launch.sh 2 configs/mtl
         --pretrained params/detr-r50-pre-vaw.pth
 ```  
 
-## For multi task training.
+## For multi task training
 ```
 CUDA_VISIBLE_DEVICES=1,2 GPUS_PER_NODE=2 ./tool/run_dist_launch.sh 2 configs/mtl_train.sh \
         --mtl_data [\'vcoco\',\'hico\',\'vaw\'] \
