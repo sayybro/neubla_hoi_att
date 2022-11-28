@@ -113,7 +113,16 @@ CUDA_VISIBLE_DEVICES=1,2 GPUS_PER_NODE=2 ./tool/run_dist_launch.sh 2 configs/mtl
         --pretrained params/detr-r50-pre-mtl.pth
 ``` 
 
-# Multi task learning evaluation
+# Evaluation
+
+## Multi task learning evaluation
+```
+configs/mtl_eval.sh \ 
+        --pretrained checkpoints/mtl_all/checkpoint.pth \
+        --output_dir checkpoints/mtl_all/test/ \
+        --mtl_data [\'vcoco\',\'hico\',\'vaw\']
+```
+
 ## vcoco evaluation
 ```
 "test_mAP_all": 0.5459505229340162, "test_mAP_thesis": 0.5670662778460144
