@@ -29,7 +29,7 @@ neubla_hoi_att
  |       |   |─ corre_vcoco.npy
  |       |   |─ trainval_vcoco.json
  |       |   |─ test_vcoco.json
- :       :
+ :       :   :
      └─ hico_20160224_det
  |       |─ images
  |       |   |─ train2015
@@ -42,8 +42,7 @@ neubla_hoi_att
  |       |   |─ corre_hico.npy
  |       |   |─ trainval_hico.json
  |       |   |─ test_hico.json
- |       |       :
- :       :
+ :       :   :
       └─ vaw
  |       |─ images
  |       |   |─ VG_100K
@@ -57,7 +56,7 @@ neubla_hoi_att
  |       |   |─ vaw_coco_train.json
  |       |   |─ vaw_coco_test.json
  |       |   |─ vaw_coco_train_cat_info.json
- |       |       :
+ :       :   :
 ```
 
 
