@@ -109,7 +109,7 @@ CUDA_VISIBLE_DEVICES=1,2 GPUS_PER_NODE=2 ./tool/run_dist_launch.sh 2 configs/mtl
 ```
 CUDA_VISIBLE_DEVICES=1,2 GPUS_PER_NODE=2 ./tool/run_dist_launch.sh 2 configs/mtl_train.sh \
         --mtl_data [\'vcoco\',\'hico\',\'vaw\'] \
-        --output_dir checkpoints/mtl_all.pth \
+        --output_dir checkpoints/mtl_all \
         --pretrained params/detr-r50-pre-mtl.pth
 ``` 
 
