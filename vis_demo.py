@@ -19,8 +19,6 @@ def hoi_att_transforms(image_set):
     return transforms
 
 
-
-
 def inference_for_vid(model, frame, args=None): #model : def forward(self, samples: NestedTensor, dtype: str='', dataset:str=''):
 
     img = Image.fromarray(frame)
