@@ -1,19 +1,3 @@
-# QPIC: Query-Based Pairwise Human-Object Interaction Detection with Image-Wide Contextual Information
-by [Masato Tamura](https://scholar.google.co.jp/citations?user=IbPzCocAAAAJ), [Hiroki Ohashi](https://scholar.google.com/citations?user=GKC6bbYAAAAJ), and Tomoaki Yoshinaga.
-
-This repository contains the official implementation of the paper "[QPIC: Query-Based Pairwise Human-Object Interaction Detection with Image-Wide Contextual Information](https://arxiv.org/abs/2103.05399)", which is accepted to CVPR2021.
-
-<div align="center">
-  <img src=".github/overview.png" width="900px" />
-</div>
-
-QPIC is implemented by extending the recently proposed object detector, DETR. QPIC leverages the query-based detection and attention mechanism in the transformer, and as a result, achieves high HOI detection performance with simple detection heads.
-
-<div align="center">
-  <img src=".github/attention.png" width="900px" />
-  <p>Example attention maps.</p>
-</div>
-
 ## Preparation
 
 ### Dependencies
@@ -91,112 +75,102 @@ python convert_parameters.py \
         --dataset vcoco
 ```
 
-### Trained parameters
-The trained parameters are available [here](https://github.com/hitachi-rd-cv/qpic/releases/tag/v1.0).
-
-## Training
-After the preparation, you can start the training with the following command.
-
-For the HICO-DET training.
+For VAW, convert the pre-trained parameters with the following command.
 ```
-python main.py \
-        --pretrained params/detr-r50-pre-hico.pth \
-        --output_dir logs \
-        --hoi \
-        --dataset_file hico \
-        --hoi_path data/hico_20160224_det \
-        --num_obj_classes 80 \
-        --num_verb_classes 117 \
-        --backbone resnet50 \
-        --set_cost_bbox 2.5 \
-        --set_cost_giou 1 \
-        --bbox_loss_coef 2.5 \
-        --giou_loss_coef 1
+python convert_parameters.py \
+        --load_path logs/checkpoint.pth \
+        --save_path params/detr-r50-pre-vaw.pth \
+        --use_vaw
 ```
 
-For the V-COCO training.
+For MTL(attribute + hoi detection), convert the pre-trained parameters with the following command.
 ```
-python main.py \
-        --pretrained params/detr-r50-pre-vcoco.pth \
-        --output_dir logs \
-        --hoi \
-        --dataset_file vcoco \
-        --hoi_path data/v-coco \
-        --num_obj_classes 81 \
-        --num_verb_classes 29 \
-        --backbone resnet50 \
-        --set_cost_bbox 2.5 \
-        --set_cost_giou 1 \
-        --bbox_loss_coef 2.5 \
-        --giou_loss_coef 1
-```
-Note that the number of object classes is 81 because one class is added for missing object.
-
-If you have multiple GPUs on your machine, you can utilize them to speed up the training. The number of GPUs is specified with the `--nproc_per_node` option. The following command starts the training with 8 GPUs for the HICO-DET training.
-```
-python -m torch.distributed.launch \
-        --nproc_per_node=8 \
-        --use_env \
-        main.py \
-        --pretrained params/detr-r50-pre-hico.pth \
-        --output_dir logs \
-        --hoi \
-        --dataset_file hico \
-        --hoi_path data/hico_20160224_det \
-        --num_obj_classes 80 \
-        --num_verb_classes 117 \
-        --backbone resnet50 \
-        --set_cost_bbox 2.5 \
-        --set_cost_giou 1 \
-        --bbox_loss_coef 2.5 \
-        --giou_loss_coef 1
+python convert_parameters.py \
+        --load_path logs/checkpoint.pth \
+        --save_path params/detr-r50-pre-mtl.pth \
+        --use_vaw \
+        --dataset vcoco
 ```
 
-## Evaluation
-The evaluation is conducted at the end of each epoch during the training. The results are written in `logs/log.txt` like below:
-```
-"test_mAP": 0.29061250833779456, "test_mAP rare": 0.21910348492395765, "test_mAP non-rare": 0.31197234650036926
-```
-`test_mAP`, `test_mAP rare`, and `test_mAP non-rare` are the results of the default full, rare, and non-rare setting, respectively.
 
-You can also conduct the evaluation with trained parameters as follows.
+
+
+# Training
+
+## For single task training
 ```
-python main.py \
-        --pretrained qpic_resnet50_hico.pth \
-        --hoi \
-        --dataset_file hico \
-        --hoi_path data/hico_20160224_det \
-        --num_obj_classes 80 \
-        --num_verb_classes 117 \
-        --backbone resnet50 \
-        --eval
+CUDA_VISIBLE_DEVICES=1,2 GPUS_PER_NODE=2 ./tool/run_dist_launch.sh 2 configs/mtl_train.sh \
+        --mtl_data [\'vaw\'] \
+        --output_dir checkpoints/vaw \
+        --pretrained params/detr-r50-pre-vaw.pth
+```  
+
+## For multi task training
+```
+CUDA_VISIBLE_DEVICES=1,2 GPUS_PER_NODE=2 ./tool/run_dist_launch.sh 2 configs/mtl_train.sh \
+        --mtl_data [\'vcoco\',\'hico\',\'vaw\'] \
+        --output_dir checkpoints/mtl_all \
+        --pretrained params/detr-r50-pre-mtl.pth
+``` 
+
+# Multi task learning evaluation
+## vcoco evaluation
+```
+"test_mAP_all": 0.5459505229340162, "test_mAP_thesis": 0.5670662778460144
+```
+## hico evaluation
+```
+"test_mAP": 0.2789136106056413, "test_mAP rare": 0.20482938557040611, "test_mAP non-rare": 0.3010426648369453
+```
+## vaw evaluation
+```
+"test_mAP": 0.05324181350284175, "test_mAP rare": 0.03170080627445978, "test_mAP non-rare": 0.07084839018722701
 ```
 
-For the official evaluation of V-COCO, a pickle file of detection results have to be generated. You can generate the file as follows.
+# Video demo inference
+## For vcoco verb inference
 ```
-python generate_vcoco_official.py \
-        --param_path logs/checkpoint.pth \
-        --save_path vcoco.pickle \
-        --hoi_path data/v-coco
+python vis_demo.py \
+        --checkpoint checkpoints/mtl_all/checkpoint.pth \
+        --inf_type vcoco \
+        --mtl_data [\'vcoco\'] \
+        --mtl \
+        --video_file video/cycle.mp4 \
+        --show_vid \
+        --top_k 2 \
+        --threshold 0.4
+```  
+
+## For hico verb inference
 ```
+python vis_demo.py \
+        --checkpoint checkpoints/mtl_all/checkpoint.pth \
+        --inf_type hico \
+        --mtl_data [\'hico\'] \
+        --mtl \
+        --video_file video/cycle.mp4 \
+        --show_vid \
+        --top_k 2 \
+        --threshold 0.4
+```  
 
-## Results
-HICO-DET.
-|| Full (D) | Rare (D) | Non-rare (D) | Full(KO) | Rare (KO) | Non-rare (KO) |
-| :--- | :---: | :---: | :---: | :---: | :---: | :---: |
-|QPIC (ResNet50)| 29.07 | 21.85 | 31.23 | 31.68 | 24.14 | 33.93 |
-|QPIC (ResNet101)| 29.90 | 23.92 | 31.69 | 32.38 | 26.06 | 34.27 |
+## For vaw attribute inference
+```
+python vis_demo.py \
+        --checkpoint checkpoints/mtl_all/checkpoint.pth \
+        --inf_type vaw \
+        --mtl_data [\'vaw\'] \
+        --mtl \
+        --video_file video/animal.mp4 \
+        --show_vid \
+        --top_k 2 \
+        --threshold 0.4
+```  
 
-D: Default, KO: Known object
 
-V-COCO.
-|| Scenario 1 | Scenario 2 |
-| :--- | :---: | :---: |
-|QPIC (ResNet50)| 58.8 | 61.0
-|QPIC (ResNet101)| 58.3 | 60.7
 
 ## Citation
-Please consider citing our paper if it helps your research.
+Our implementation is based on the official code QPIC
 ```
 @inproceedings{tamura_cvpr2021,
 author = {Tamura, Masato and Ohashi, Hiroki and Yoshinaga, Tomoaki},
