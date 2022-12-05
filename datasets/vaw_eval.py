@@ -30,7 +30,7 @@ class VAWEvaluator():
             self.gts.append({'annotations': [{'bbox': bbox, 'category_id': label} for bbox, label in zip(img_gts['boxes'], img_gts['labels'])]
                             ,'attr_annotation':[]})
             #import pdb; pdb.set_trace()
-            for i,attr in enumerate(img_gts['pos_att_classes']): #i가 왜 object id..?
+            for i,attr in enumerate(img_gts['pos_att_classes']): 
                 #attr.shape : (620,0)
 
                 #attr_idxs : array([412])
