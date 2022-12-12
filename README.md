@@ -184,7 +184,20 @@ python vis_demo.py \
         --show_vid \
         --top_k 2 \
         --threshold 0.4
-```  
+``` 
+
+## For hoi inference (hico verb + vcoco verb) 
+```
+python vis_demo.py \
+        --checkpoint checkpoints/mtl_all/checkpoint.pth \
+        --inf_type [\'hico\',\'vcoco\'] \
+        --mtl_data [\'hico\',\'vcoco\'] \
+        --mtl \
+        --video_file video/cycle.mp4 \
+        --show_vid \
+        --top_k 2 \
+        --threshold 0.4
+``` 
 
 ## For vaw attribute inference
 ```
