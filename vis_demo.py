@@ -13,13 +13,13 @@ import pandas as pd
 from index2cat import vcoco_index_2_cat, hico_index_2_cat, vaw_index_2_cat
 import json
 
-# Add color jitter to coco transforms
+
 def hoi_att_transforms(image_set):
     transforms = make_vcoco_transforms(image_set)
     return transforms
 
 
-def inference_for_vid(model, frame, args=None): #model : def forward(self, samples: NestedTensor, dtype: str='', dataset:str=''):
+def inference_for_vid(model, frame, args=None):
 
     img = Image.fromarray(frame)
     transform = hoi_att_transforms('val')

@@ -14,21 +14,12 @@ Note that this command may dump errors during installing pycocotools, but the er
 HICO-DET dataset can be downloaded [here](https://drive.google.com/open?id=1QZcJmGVlF9f4h-XLWe9Gkmnmj2z1gSnk). After finishing downloading, unpack the tarball (`hico_20160224_det.tar.gz`) to the `data` directory.
 
 Instead of using the original annotations files, we use the annotation files provided by the PPDM authors. The annotation files can be downloaded from [here](https://drive.google.com/open?id=1WI-gsNLS-t0Kh8TVki1wXqc3y2Ow1f2R). The downloaded annotation files have to be placed as follows.
-```
-qpic
- |─ data
- │   └─ hico_20160224_det
- |       |─ annotations
- |       |   |─ trainval_hico.json
- |       |   |─ test_hico.json
- |       |   └─ corre_hico.npy
- :       :
-```
 
 #### V-COCO
 First clone the repository of V-COCO from [here](https://github.com/s-gupta/v-coco), and then follow the instruction to generate the file `instances_vcoco_all_2014.json`. Next, download the prior file `prior.pickle` from [here](https://drive.google.com/drive/folders/10uuzvMUCVVv95-xAZg5KS94QXm7QXZW4). Place the files and make directories as follows.
+
 ```
-qpic
+neubla_hoi_att
  |─ data
  │   └─ v-coco
  |       |─ data
@@ -43,8 +34,40 @@ qpic
  |       |       |─ COCO_val2014_000000000042.jpg
  |       |       :
  |       |─ annotations
- :       :
+ |       |   |─ corre_vcoco.npy
+ |       |   |─ trainval_vcoco.json
+ |       |   |─ test_vcoco.json
+ :       :   :
+     └─ hico_20160224_det
+ |       |─ images
+ |       |   |─ train2015
+ |       |   |   |─ HICO_train2015_00000001.jpg
+ |       |   |   :
+ |       |   └─ test2015
+ |       |       |─ HICO_test2015_00000001.jpg
+ |       |       :
+ |       |─ annotations
+ |       |   |─ corre_hico.npy
+ |       |   |─ trainval_hico.json
+ |       |   |─ test_hico.json
+ :       :   :
+      └─ vaw
+ |       |─ images
+ |       |   |─ VG_100K
+ |       |   |   |─ 2.jpg
+ |       |   |   :
+ |       |   └─ VG_100K_2
+ |       |       |─ 1.jpg
+ |       |       :
+ |       |─ annotations
+ |       |   |─ attribute_index.json
+ |       |   |─ vaw_coco_train.json
+ |       |   |─ vaw_coco_test.json
+ |       |   |─ vaw_coco_train_cat_info.json
+ :       :   :
 ```
+
+
 For our implementation, the annotation file have to be converted to the HOIA format. The conversion can be conducted as follows.
 ```
 PYTHONPATH=data/v-coco \
@@ -113,7 +136,16 @@ CUDA_VISIBLE_DEVICES=1,2 GPUS_PER_NODE=2 ./tool/run_dist_launch.sh 2 configs/mtl
         --pretrained params/detr-r50-pre-mtl.pth
 ``` 
 
-# Multi task learning evaluation
+# Evaluation
+
+## Multi task learning evaluation
+```
+configs/mtl_eval.sh \ 
+        --pretrained checkpoints/mtl_all/checkpoint.pth \
+        --output_dir test_results/ \
+        --mtl_data [\'vcoco\',\'hico\',\'vaw\']
+```
+
 ## vcoco evaluation
 ```
 "test_mAP_all": 0.5459505229340162, "test_mAP_thesis": 0.5670662778460144
