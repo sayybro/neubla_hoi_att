@@ -64,7 +64,7 @@ class Transformer(nn.Module):
                           pos=pos_embed, query_pos=query_embed)
         return hs.transpose(1, 2), memory.permute(1, 2, 0).view(bs, c, h, w)
 
-#transformer for entangled decoder(hoi(hico+vcoco)&vaw)
+#transformer for divided decoder(hoi decoder + att decoder)
 class Transformer_div(nn.Module):
 
     def __init__(self, d_model=512, nhead=8, num_encoder_layers=6,

@@ -1,6 +1,7 @@
 import numpy as np
 from collections import defaultdict
 import copy
+import json
 
 class VAWEvaluator():
     def __init__(self, preds, gts, subject_category_id, rare_triplets,non_rare_triplets, valid_masks, max_pred):
@@ -23,14 +24,13 @@ class VAWEvaluator():
 
         self.ggg = gts
         self.gts = []
-        #import pdb; pdb.set_trace()
         
         for img_gts in gts:
             img_gts = {k: v.to('cpu').numpy() for k, v in img_gts.items() if k not in ['id','type','dataset'] }
             self.gts.append({'annotations': [{'bbox': bbox, 'category_id': label} for bbox, label in zip(img_gts['boxes'], img_gts['labels'])]
                             ,'attr_annotation':[]})
             #import pdb; pdb.set_trace()
-            for i,attr in enumerate(img_gts['pos_att_classes']): #i가 왜 object id..?
+            for i,attr in enumerate(img_gts['pos_att_classes']): 
                 #attr.shape : (620,0)
 
                 #attr_idxs : array([412])
@@ -144,9 +144,18 @@ class VAWEvaluator():
                 'attr_prediction': attrs #{'object_id'(query_id): 76, 'category_id'(attribute_id): 49, 'score': 0.29883718}
             })
     def evaluate(self):
+        count_dict = dict()
         #import pdb;pdb.set_trace()
         for img_id, (img_preds, img_gts) in enumerate(zip(self.preds, self.gts)):#len(self.preds):3452, len(self.gts):3452
-            #import pdb;pdb.set_trace()
+            
+            if img_gts['attr_annotation']:
+                for annotation in img_gts['attr_annotation']:
+                    attribute_idx = str(annotation['category_id'])
+                    if attribute_idx in count_dict.keys():
+                        count_dict[attribute_idx] += 1
+                    else:
+                        count_dict[attribute_idx] = 1
+                #import pdb;pdb.set_trace()
             print(f"Evaluating Score Matrix... : [{(img_id+1):>4}/{len(self.gts):<4}]" ,flush=True, end="\r")
             
             '''
@@ -186,6 +195,10 @@ class VAWEvaluator():
                     self.tp[double].append(0)
                     self.fp[double].append(1)
                     self.score[double].append(pred_attr['score'])
+
+        with open('count_dict.json', 'w') as f:
+            json.dump(count_dict, f)
+        #import pdb;pdb.set_trace()
         print(f"[stats] Score Matrix Generation completed!!")
         map = self.compute_map()
         return map
@@ -195,6 +208,7 @@ class VAWEvaluator():
         rare_ap = defaultdict(lambda: 0)
         non_rare_ap = defaultdict(lambda: 0)
         max_recall = defaultdict(lambda: 0)
+        #import pdb; pdb.set_trace()
         for double in self.gt_double:
             sum_gts = self.sum_gts[double]
             if sum_gts == 0:
@@ -229,6 +243,26 @@ class VAWEvaluator():
                 non_rare_ap[double] = ap[double]
             else:
                 print('Warning: triplet {} is neither in rare triplets nor in non-rare triplets'.format(double))
+        
+        # ap_dict = {str(k):v for k,v in dict(ap).items()}
+        # rare_ap_dict = {str(k):v for k,v in dict(rare_ap).items()}
+        # non_rare_ap_dict = {str(k):v for k,v in dict(non_rare_ap).items()}
+        # max_recall_dict = {str(k):v for k,v in dict(max_recall).items()}
+        
+        #import pdb; pdb.set_trace()
+        
+        # with open('ap.json', 'w') as f:
+        #     json.dump(dict(ap_dict), f)
+        
+        # with open('rare_ap.json', 'w') as f:
+        #     json.dump(dict(rare_ap_dict), f)
+        
+        # with open('non_rare_ap.json', 'w') as f:
+        #     json.dump(dict(non_rare_ap_dict), f)
+
+        # with open('max_recall.json', 'w') as f:
+        #     json.dump(dict(max_recall_dict), f)
+        
         m_ap = np.mean(list(ap.values()))
         m_ap_rare = np.mean(list(rare_ap.values()))
         m_ap_non_rare = np.mean(list(non_rare_ap.values()))

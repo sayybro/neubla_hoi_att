@@ -25,13 +25,19 @@ def inference_for_vid(model, frame, args=None): #model : def forward(self, sampl
     transform = hoi_att_transforms('val')
     sample = img.copy()
     sample, _ = transform(sample, None)
-    dataset = args.inf_type #hico or vcoco or vaw
+    dataset = args.inf_type #hico or vcoco or hoi or vaw
     if dataset == 'vaw':
         dtype = 'att'
-    else:
+    else: 
         dtype = 'hoi'
-    output = model(sample.unsqueeze(0), dtype, dataset)
-    return output
+    
+    if 'hico' in dataset and 'vcoco' in dataset:
+        output_hico = model(sample.unsqueeze(0), dtype, 'hico')
+        output_vcoco = model(sample.unsqueeze(0), dtype, 'vcoco')
+        return output_hico, output_vcoco
+    else:
+        output = model(sample.unsqueeze(0), dtype, dataset)
+        return output
 
 
 def valid_att_idxs(anno_file):
@@ -49,7 +55,7 @@ def valid_att_idxs(anno_file):
 
 def change_format(results, args):
 
-    if args.inf_type == 'vcoco' or args.inf_type == 'hico':
+    if args.inf_type == 'vcoco' or args.inf_type == 'hico' or ('hico' in args.inf_type and 'vcoco' in args.inf_type):
         boxes,labels,pair_scores = list(map(lambda x: x.cpu().numpy(), [results['boxes'], results['labels'], results['verb_scores']]))
         output_i={}
         output_i['box_predictions']=[]
@@ -119,8 +125,10 @@ def draw_img(img, output_i, top_k, threshold, color_dict, inf_type):
                 attributes = np.where(prediction['attr_score'] > threshold)
                 o_bbox = prediction['object_box']
                 o_class = prediction['object_id']                
-                vis_img = cv2.rectangle(vis_img, (int(o_bbox[0]),int(o_bbox[1])), (int(o_bbox[2]),int(o_bbox[3])), color_dict['object'][0], 3)
-                print('drawing object box')
+                vis_img = cv2.rectangle(vis_img, (int(o_bbox[0]),int(o_bbox[1])), (int(o_bbox[2]),int(o_bbox[3])), color_dict[int(o_class)], 3)
+                print(f'drawing object box')
+                
+                
                 #import pdb; pdb.set_trace()
                 text_size, BaseLine=cv2.getTextSize(index_2_cat(attributes[0][0],args.inf_type),cv2.FONT_HERSHEY_SIMPLEX,1,2)
 
@@ -141,7 +149,85 @@ def draw_img(img, output_i, top_k, threshold, color_dict, inf_type):
                     cnt += 1 
     
     #for hoi inference
+    elif ('vcoco' in inf_type) and ('hico' in inf_type):
+        actions = {'hico':[],'vcoco':[]}
+        for output in output_i:
+            for box, hoi in zip(output['box_predictions'], output['hoi_predictions']):
+                #prediction threshold
+                if hoi['max_score'] < threshold:
+                    continue
+                
+                subject_id = hoi['subject_id']
+                subject_box = box['h_bbox']
+                object_id = hoi['object_id']
+                object_box = box['o_bbox']
+                verb_score = hoi['pair_score']
+                max_verb_score = hoi['max_score']
+                single_out = {'subject_box':np.array(subject_box), 'object_box':np.array(object_box), 'subject_id':np.array(subject_id), 'object_id':np.array(object_id), 'verb_score':np.array(verb_score), 'max_verb_score':np.array(max_verb_score)}
+                if single_out['verb_score'].shape == (117,): #hico
+                    actions['hico'].append(single_out)
+                elif single_out['verb_score'].shape == (29,): #vcoco
+                    actions['vcoco'].append(single_out)
+                
+            if len(actions['hico']) > 0 and len(actions['vcoco']) > 0:
+                #import pdb; pdb.set_trace()
+                hico,vcoco = pd.DataFrame(actions['hico']), pd.DataFrame(actions['vcoco'])
+                hico,vcoco = hico.sort_values(by=['max_verb_score'],ascending=False).iloc[:top_k], vcoco.sort_values(by=['max_verb_score'],ascending=False).iloc[:top_k] 
+                hico_actions = hico.to_dict('records')
+                vcoco_actions = vcoco.to_dict('records')
+                #import pdb; pdb.set_trace()
+                
+                for i, action in enumerate(hico_actions):
+                    verbs = np.where(action['verb_score'] > threshold)
+                    s_bbox = action['subject_box']
+                    o_bbox = action['object_box']
+                    o_class = action['object_id']
+                    #import pdb; pdb.set_trace()
+                    vis_img = cv2.rectangle(vis_img, (int(s_bbox[0]),int(s_bbox[1])), (int(s_bbox[2]),int(s_bbox[3])), color_dict[0], 3)
+                    print('drawing subject box')
+                    
+                    vis_img = cv2.rectangle(vis_img, (int(o_bbox[0]),int(o_bbox[1])), (int(o_bbox[2]),int(o_bbox[3])), color_dict[int(o_class)], 3)
+                    print('drawing object box')
+                    #print(int(o_class))
+                    text_size, BaseLine=cv2.getTextSize(index_2_cat(verbs[0][0],'hico'),cv2.FONT_HERSHEY_SIMPLEX,1,2)
+                    
+                    #text height for multiple verbs (interactions)
+                    text_size_y = text_size[1] 
+                    cnt = 1
+                    for verb in verbs[0]:
+                        
+                        text = index_2_cat(verb,'hico')
+                        text_size, BaseLine=cv2.getTextSize(text,cv2.FONT_HERSHEY_SIMPLEX,1,2)
+                        if s_bbox[1]-cnt*text_size_y < 0 or s_bbox[0] < 0:
+                            break
+                        text_box = [s_bbox[0], s_bbox[1]-cnt*text_size_y, s_bbox[0]+text_size[0],s_bbox[1]-(cnt-1)*text_size_y]
+
+                        #draw text
+                        vis_img = cv2.rectangle(vis_img, (int(text_box[0]),int(text_box[1])),(int(text_box[2]),int(text_box[3])), color_dict[int(o_class)], -1)
+                        vis_img = cv2.putText(vis_img, text, (int(text_box[0]),int(text_box[3])),cv2.FONT_HERSHEY_SIMPLEX,1,(255,255,255),2,cv2.LINE_AA,False)
+                        print(f'drawing hico action box : {text}, {cnt}')
+                        cnt += 1 
+                    
+                for i, action in enumerate(vcoco_actions):
+                    verbs = np.where(action['verb_score'] > threshold)
+                    for verb in verbs[0]:
+                        
+                        text = index_2_cat(verb,'vcoco')
+                        text_size, BaseLine=cv2.getTextSize(text,cv2.FONT_HERSHEY_SIMPLEX,1,2)
+                        if s_bbox[1]-cnt*text_size_y < 0 or s_bbox[0] < 0:
+                            break
+                        text_box = [s_bbox[0], s_bbox[1]-cnt*text_size_y, s_bbox[0]+text_size[0],s_bbox[1]-(cnt-1)*text_size_y]
+
+                        #draw vcoco verb text
+                        vis_img = cv2.rectangle(vis_img, (int(text_box[0]),int(text_box[1])),(int(text_box[2]),int(text_box[3])), color_dict[int(o_class)], -1)
+                        vis_img = cv2.putText(vis_img, text, (int(text_box[0]),int(text_box[3])),cv2.FONT_HERSHEY_SIMPLEX,1,(255,255,255),2,cv2.LINE_AA,False)
+                        print(f'drawing vcoco action box : {text}, {cnt}')
+                        cnt += 1 
+
+    
     else:
+
+
         list_actions = []
         for box, hoi in zip(output_i['box_predictions'], output_i['hoi_predictions']):
 
@@ -173,7 +259,7 @@ def draw_img(img, output_i, top_k, threshold, color_dict, inf_type):
                 
                 vis_img = cv2.rectangle(vis_img, (int(o_bbox[0]),int(o_bbox[1])), (int(o_bbox[2]),int(o_bbox[3])), color_dict[int(o_class)], 3)
                 print('drawing object box')
-
+                #print(int(o_class))
                 text_size, BaseLine=cv2.getTextSize(index_2_cat(verbs[0][0],args.inf_type),cv2.FONT_HERSHEY_SIMPLEX,1,2)
                 
                 #text height for multiple verbs (interactions)
@@ -218,14 +304,35 @@ if __name__ == '__main__':
         print(f'frame_num : {frame_num}')
         if not retval:
             break
-        outputs = inference_for_vid(model, frame, args)
-        preds = []
-        results = postprocessors(outputs, orig_size)
-        preds.extend(list(itertools.chain.from_iterable(utils.all_gather(results))))
-        output_i = change_format(preds[0], args)
-        vis_img = draw_img(frame,output_i,top_k=args.top_k,threshold=args.threshold,color_dict=color_dict,inf_type=args.inf_type)
-        output_file.write(vis_img)
-        frame_num += 1
+        
+        if 'hico' in args.inf_type and 'vcoco' in args.inf_type:
+            outputs_hico, outputs_vcoco = inference_for_vid(model, frame, args)
+            preds = []
+            results_hico = postprocessors(outputs_hico, orig_size)
+            results_vcoco = postprocessors(outputs_vcoco, orig_size)
+            
+            preds.extend(list(itertools.chain.from_iterable(utils.all_gather(results_hico))))
+            preds.extend(list(itertools.chain.from_iterable(utils.all_gather(results_vcoco))))
+            output_hico = change_format(preds[0], args)
+            output_vcoco = change_format(preds[1], args)
+        
+            output_i = []
+            output_i.append(output_hico)
+            output_i.append(output_vcoco)
+            #import pdb; pdb.set_trace()
+            vis_img = draw_img(frame,output_i,top_k=args.top_k,threshold=args.threshold,color_dict=color_dict,inf_type=args.inf_type)
+            output_file.write(vis_img)
+            frame_num += 1
+
+        else:
+            outputs = inference_for_vid(model, frame, args)
+            preds = []
+            results = postprocessors(outputs, orig_size)
+            preds.extend(list(itertools.chain.from_iterable(utils.all_gather(results))))
+            output_i = change_format(preds[0], args)
+            vis_img = draw_img(frame,output_i,top_k=args.top_k,threshold=args.threshold,color_dict=color_dict,inf_type=args.inf_type)
+            output_file.write(vis_img)
+            frame_num += 1
 
     
     cap.release()
