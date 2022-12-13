@@ -10,7 +10,7 @@ import itertools
 import util.misc as utils
 from datasets.vcoco import make_vcoco_transforms
 import pandas as pd
-from index2cat import vcoco_index_2_cat, hico_index_2_cat, vaw_index_2_cat
+from index2cat import vcoco_index_2_cat, hico_index_2_cat, vaw_index_2_cat, color_index
 import json
 
 class Demo():
@@ -24,6 +24,7 @@ class Demo():
         self.frame_num = 0
         self.inf_type = args.inf_type
         self.num_obj_classes = args.num_obj_classes
+        self.color_index = color_index()
 
     def hoi_att_transforms(self, image_set):
         transforms = make_vcoco_transforms(image_set)
@@ -50,7 +51,6 @@ class Demo():
 
 
     def valid_att_idxs(self, anno_file):
-        #import pdb; pdb.set_trace()
         with open(anno_file, 'r') as f:
             annotations = json.load(f)
         num_attributes = 620
@@ -106,10 +106,12 @@ class Demo():
         return color_dict 
 
 
-    def draw_img(self, img, output_i, top_k, threshold, color_dict, inf_type):
+
+
+
+    def draw_img(self, img, output_i, top_k, threshold, color_dict, inf_type, color=False):
         vis_img = img.copy()
 
-        #for attribute inference
         if inf_type == 'vaw':
             list_predictions = []
             for predict in output_i['predictions']:
@@ -123,27 +125,40 @@ class Demo():
                 max_attr_score = predict['max_score']
                 single_out = {'object_box':np.array(object_box), 'object_id':np.array(object_id), 'attr_score':np.array(attr_score), 'max_attr_score':np.array(max_attr_score)}
                 list_predictions.append(single_out)
+            
             if list_predictions:
                 df = pd.DataFrame(list_predictions)
                 df = df.sort_values(by=['max_attr_score'],ascending=False).iloc[:top_k]
                 list_predictions = df.to_dict('records')
-                #import pdb; pdb.set_trace()
                 for i, prediction in enumerate(list_predictions):
+
                     attributes = np.where(prediction['attr_score'] > threshold)
                     o_bbox = prediction['object_box']
                     o_class = prediction['object_id']                
-                    vis_img = cv2.rectangle(vis_img, (int(o_bbox[0]),int(o_bbox[1])), (int(o_bbox[2]),int(o_bbox[3])), color_dict[int(o_class)], 3)
-                    print(f'drawing object box')
                     
+                    if color: #only color inference
+                        for attr in attributes[0]:
+                            if attr in self.color_index:
+                                #if color index draw object box 
+                                vis_img = cv2.rectangle(vis_img, (int(o_bbox[0]),int(o_bbox[1])), (int(o_bbox[2]),int(o_bbox[3])), color_dict[int(o_class)], 3)
+                                print(f'drawing object box')
+                            else:
+                                continue
+ 
+                    else:
+                        vis_img = cv2.rectangle(vis_img, (int(o_bbox[0]),int(o_bbox[1])), (int(o_bbox[2]),int(o_bbox[3])), color_dict[int(o_class)], 3)
+                        print(f'drawing object box')
                     
-                    #import pdb; pdb.set_trace()
                     text_size, BaseLine=cv2.getTextSize(self.index_2_cat(attributes[0][0],args.inf_type),cv2.FONT_HERSHEY_SIMPLEX,1,2)
 
                     #text height for multiple attributes
                     text_size_y = text_size[1] 
                     cnt = 1
                     for attr in attributes[0]:
+                        if attr not in self.color_index:
+                            continue
                         text = self.index_2_cat(attr,args.inf_type)
+                            
                         text_size, BaseLine=cv2.getTextSize(text,cv2.FONT_HERSHEY_SIMPLEX,1,2)
                         if o_bbox[1]-cnt*text_size_y < 0 or o_bbox[0] < 0:
                             break
@@ -315,7 +330,11 @@ class Demo():
                 results = postprocessors(outputs, orig_size)
                 preds.extend(list(itertools.chain.from_iterable(utils.all_gather(results))))
                 output_i = self.change_format(preds[0], args)
-                vis_img = self.draw_img(frame,output_i,top_k=args.top_k,threshold=args.threshold,color_dict=color_dict,inf_type=args.inf_type)
+
+                if args.color and (args.inf_type == 'vaw'):
+                    vis_img = self.draw_img(frame,output_i,top_k=args.top_k,threshold=args.threshold,color_dict=color_dict,inf_type=args.inf_type, color=args.color)
+                else:
+                    vis_img = self.draw_img(frame,output_i,top_k=args.top_k,threshold=args.threshold,color_dict=color_dict,inf_type=args.inf_type)
                 output_file.write(vis_img)
                 self.frame_num += 1
 

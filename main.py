@@ -185,7 +185,8 @@ def get_args_parser():
     parser.add_argument('--top_k', default=1,type=int,help='top_k value')
     parser.add_argument('--threshold', default=0.3,type=float,help='threshold value')
     parser.add_argument('--fps', default=30,type=int,help='fps')
-
+    parser.add_argument('--color', action='store_true',help='only color inference for vaw')
+    
     
     return parser
 
