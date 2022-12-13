@@ -107,7 +107,6 @@ class Demo():
 
 
     def draw_img(self, img, output_i, top_k, threshold, color_dict, inf_type):
-        #import pdb; pdb.set_trace()
         vis_img = img.copy()
 
         #for attribute inference
@@ -156,11 +155,12 @@ class Demo():
                         print(f'drawing attribute box : {text}, {cnt}')
                         cnt += 1 
         
-        #for hoi inference
+        #for hoi multi head inference
         elif ('vcoco' in inf_type) and ('hico' in inf_type):
             actions = {'hico':[],'vcoco':[]}
             for output in output_i:
                 for box, hoi in zip(output['box_predictions'], output['hoi_predictions']):
+                    
                     #prediction threshold
                     if hoi['max_score'] < threshold:
                         continue
@@ -178,32 +178,27 @@ class Demo():
                         actions['vcoco'].append(single_out)
                     
                 if len(actions['hico']) > 0 and len(actions['vcoco']) > 0:
-                    #import pdb; pdb.set_trace()
                     hico,vcoco = pd.DataFrame(actions['hico']), pd.DataFrame(actions['vcoco'])
                     hico,vcoco = hico.sort_values(by=['max_verb_score'],ascending=False).iloc[:top_k], vcoco.sort_values(by=['max_verb_score'],ascending=False).iloc[:top_k] 
                     hico_actions = hico.to_dict('records')
                     vcoco_actions = vcoco.to_dict('records')
-                    #import pdb; pdb.set_trace()
                     
                     for i, action in enumerate(hico_actions):
                         verbs = np.where(action['verb_score'] > threshold)
                         s_bbox = action['subject_box']
                         o_bbox = action['object_box']
                         o_class = action['object_id']
-                        #import pdb; pdb.set_trace()
                         vis_img = cv2.rectangle(vis_img, (int(s_bbox[0]),int(s_bbox[1])), (int(s_bbox[2]),int(s_bbox[3])), color_dict[0], 3)
                         print('drawing subject box')
                         
                         vis_img = cv2.rectangle(vis_img, (int(o_bbox[0]),int(o_bbox[1])), (int(o_bbox[2]),int(o_bbox[3])), color_dict[int(o_class)], 3)
                         print('drawing object box')
-                        #print(int(o_class))
                         text_size, BaseLine=cv2.getTextSize(self.index_2_cat(verbs[0][0],'hico'),cv2.FONT_HERSHEY_SIMPLEX,1,2)
                         
                         #text height for multiple verbs (interactions)
                         text_size_y = text_size[1] 
                         cnt = 1
-                        for verb in verbs[0]:
-                            
+                        for verb in verbs[0]:    
                             text = self.index_2_cat(verb,'hico')
                             text_size, BaseLine=cv2.getTextSize(text,cv2.FONT_HERSHEY_SIMPLEX,1,2)
                             if s_bbox[1]-cnt*text_size_y < 0 or s_bbox[0] < 0:
@@ -219,7 +214,6 @@ class Demo():
                     for i, action in enumerate(vcoco_actions):
                         verbs = np.where(action['verb_score'] > threshold)
                         for verb in verbs[0]:
-                            
                             text = self.index_2_cat(verb,'vcoco')
                             text_size, BaseLine=cv2.getTextSize(text,cv2.FONT_HERSHEY_SIMPLEX,1,2)
                             if s_bbox[1]-cnt*text_size_y < 0 or s_bbox[0] < 0:
@@ -233,9 +227,7 @@ class Demo():
                             cnt += 1 
 
         
-        else:
-
-
+        else: #for hoi single head inference 
             list_actions = []
             for box, hoi in zip(output_i['box_predictions'], output_i['hoi_predictions']):
 
@@ -261,27 +253,23 @@ class Demo():
                     s_bbox = action['subject_box']
                     o_bbox = action['object_box']
                     o_class = action['object_id']
-                    #import pdb; pdb.set_trace()
                     vis_img = cv2.rectangle(vis_img, (int(s_bbox[0]),int(s_bbox[1])), (int(s_bbox[2]),int(s_bbox[3])), color_dict[0], 3)
                     print('drawing subject box')
-                    
                     vis_img = cv2.rectangle(vis_img, (int(o_bbox[0]),int(o_bbox[1])), (int(o_bbox[2]),int(o_bbox[3])), color_dict[int(o_class)], 3)
                     print('drawing object box')
-                    #print(int(o_class))
                     text_size, BaseLine=cv2.getTextSize(self.index_2_cat(verbs[0][0],args.inf_type),cv2.FONT_HERSHEY_SIMPLEX,1,2)
-                    
+            
                     #text height for multiple verbs (interactions)
                     text_size_y = text_size[1] 
                     cnt = 1
                     for verb in verbs[0]:
-                        
                         text = self.index_2_cat(verb,args.inf_type)
                         text_size, BaseLine=cv2.getTextSize(text,cv2.FONT_HERSHEY_SIMPLEX,1,2)
                         if s_bbox[1]-cnt*text_size_y < 0 or s_bbox[0] < 0:
                             break
-                        text_box = [s_bbox[0], s_bbox[1]-cnt*text_size_y, s_bbox[0]+text_size[0],s_bbox[1]-(cnt-1)*text_size_y]
 
                         #draw text
+                        text_box = [s_bbox[0], s_bbox[1]-cnt*text_size_y, s_bbox[0]+text_size[0],s_bbox[1]-(cnt-1)*text_size_y]
                         vis_img = cv2.rectangle(vis_img, (int(text_box[0]),int(text_box[1])),(int(text_box[2]),int(text_box[3])), color_dict[int(o_class)], -1)
                         vis_img = cv2.putText(vis_img, text, (int(text_box[0]),int(text_box[3])),cv2.FONT_HERSHEY_SIMPLEX,1,(255,255,255),2,cv2.LINE_AA,False)
                         print(f'drawing action box : {text}, {cnt}')
@@ -294,16 +282,17 @@ class Demo():
         frame_size = (frame_width, frame_height)
         orig_size = torch.as_tensor([frame_height,frame_width]).unsqueeze(0).to('cuda')
         output_file = cv2.VideoWriter(self.output_dir, self.fourcc, self.fps, frame_size)
-        #model, _, postprocessors = build_model(args) #model, criterion, postprocessors
         checkpoint = torch.load(self.checkpoint, map_location='cpu')
         model.load_state_dict(checkpoint['model'],strict=False)
         color_dict = self.make_color_dict(self.num_obj_classes)
         while(True):
+
             retval, frame = self.cap.read() 
             print(f'frame_num : {self.frame_num}')
+
             if not retval:
                 break
-            
+
             if 'hico' in self.inf_type and 'vcoco' in self.inf_type:
                 outputs_hico, outputs_vcoco = self.inference_for_vid(model, frame, args)
                 preds = []
@@ -330,7 +319,6 @@ class Demo():
                 output_file.write(vis_img)
                 self.frame_num += 1
 
-        
         self.cap.release()
         self.output_file.release()
         cv2.destroyAllWindows()
