@@ -170,7 +170,8 @@ python vis_demo.py \
         --video_file video/cycle.mp4 \
         --show_vid \
         --top_k 2 \
-        --threshold 0.4
+        --threshold 0.4 \
+        --fps 30
 ```  
 
 ## For hico verb inference
@@ -183,7 +184,8 @@ python vis_demo.py \
         --video_file video/cycle.mp4 \
         --show_vid \
         --top_k 2 \
-        --threshold 0.4
+        --threshold 0.4 \
+        --fps 30
 ``` 
 
 ## For hoi inference (hico verb + vcoco verb) 
@@ -196,7 +198,8 @@ python vis_demo.py \
         --video_file video/cycle.mp4 \
         --show_vid \
         --top_k 2 \
-        --threshold 0.4
+        --threshold 0.4 \
+        --fps 30
 ``` 
 
 ## For vaw attribute inference
@@ -209,7 +212,8 @@ python vis_demo.py \
         --video_file video/animal.mp4 \
         --show_vid \
         --top_k 2 \
-        --threshold 0.4
+        --threshold 0.4 \
+        --fps 30
 ```  
 
 
