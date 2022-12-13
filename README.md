@@ -148,15 +148,15 @@ configs/mtl_eval.sh \
 
 ## vcoco evaluation
 ```
-"test_mAP_all": 0.5459505229340162, "test_mAP_thesis": 0.5670662778460144
+"test_mAP_all": 0.5455718251429631, "test_mAP_thesis": 0.5663461447990525
 ```
 ## hico evaluation
 ```
-"test_mAP": 0.2789136106056413, "test_mAP rare": 0.20482938557040611, "test_mAP non-rare": 0.3010426648369453
+"test_mAP": 0.27877264960450454, "test_mAP rare": 0.20416854381834068, "test_mAP non-rare": 0.30105699289128085, "test_mean max recall": 0.6536133057960736
 ```
 ## vaw evaluation
 ```
-"test_mAP": 0.05324181350284175, "test_mAP rare": 0.03170080627445978, "test_mAP non-rare": 0.07084839018722701
+"test_mAP": 0.0524253535493328, "test_mAP rare": 0.029776368059209662, "test_mAP non-rare": 0.07093753803669373, "test_mean max recall": 0.37233911507467743
 ```
 
 # Video demo inference
@@ -170,7 +170,8 @@ python vis_demo.py \
         --video_file video/cycle.mp4 \
         --show_vid \
         --top_k 2 \
-        --threshold 0.4
+        --threshold 0.4 \
+        --fps 30
 ```  
 
 ## For hico verb inference
@@ -183,7 +184,8 @@ python vis_demo.py \
         --video_file video/cycle.mp4 \
         --show_vid \
         --top_k 2 \
-        --threshold 0.4
+        --threshold 0.4 \
+        --fps 30
 ``` 
 
 ## For hoi inference (hico verb + vcoco verb) 
@@ -196,7 +198,8 @@ python vis_demo.py \
         --video_file video/cycle.mp4 \
         --show_vid \
         --top_k 2 \
-        --threshold 0.4
+        --threshold 0.4 \
+        --fps 30
 ``` 
 
 ## For vaw attribute inference
@@ -209,10 +212,24 @@ python vis_demo.py \
         --video_file video/animal.mp4 \
         --show_vid \
         --top_k 2 \
-        --threshold 0.4
+        --threshold 0.4 \
+        --fps 30
 ```  
 
-
+## For vaw color inference
+```
+python vis_demo.py \
+        --checkpoint checkpoints/mtl_all/checkpoint.pth \
+        --inf_type vaw \
+        --mtl_data [\'vaw\'] \
+        --mtl \
+        --video_file video/animal.mp4 \
+        --show_vid \
+        --top_k 2 \
+        --threshold 0.4 \
+        --fps 30 \
+        --color
+```  
 
 ## Citation
 Our implementation is based on the official code QPIC
