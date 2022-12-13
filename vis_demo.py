@@ -25,6 +25,7 @@ class Demo():
         self.inf_type = args.inf_type
         self.num_obj_classes = args.num_obj_classes
         self.color_index = color_index()
+        self.count_dict = {}
 
     def hoi_att_transforms(self, image_set):
         transforms = make_vcoco_transforms(image_set)
@@ -49,7 +50,6 @@ class Demo():
             output = model(sample.unsqueeze(0), dtype, dataset)
             return output
 
-
     def valid_att_idxs(self, anno_file):
         with open(anno_file, 'r') as f:
             annotations = json.load(f)
@@ -60,7 +60,6 @@ class Demo():
                 valid_masks[i['id']]=1
 
         return valid_masks
-
 
     def change_format(self,results, args):
 
@@ -92,7 +91,6 @@ class Demo():
                 output_i['predictions'].append({'bbox':box.tolist(), 'object_id': label, 'max_score':max(attr_score), 'pair_score':attr_score})
         return output_i
 
-
     def index_2_cat(self, index, inf_type):
         if inf_type =='vcoco':
             return vcoco_index_2_cat(index)
@@ -105,13 +103,8 @@ class Demo():
         color_dict = {i: list(np.random.random(size=3) * 256) for i in range(class_num)}
         return color_dict 
 
-
-
-
-
     def draw_img(self, img, output_i, top_k, threshold, color_dict, inf_type, color=False):
         vis_img = img.copy()
-
         if inf_type == 'vaw':
             list_predictions = []
             for predict in output_i['predictions']:
@@ -198,48 +191,59 @@ class Demo():
                     hico_actions = hico.to_dict('records')
                     vcoco_actions = vcoco.to_dict('records')
                     
+                    s_bbox = {}
+                    o_bbox = {}
                     for i, action in enumerate(hico_actions):
+                        self.count_dict[i] = 1
                         verbs = np.where(action['verb_score'] > threshold)
-                        s_bbox = action['subject_box']
-                        o_bbox = action['object_box']
+                        s_bbox[i] = action['subject_box']
+                        o_bbox[i] = action['object_box']
                         o_class = action['object_id']
-                        vis_img = cv2.rectangle(vis_img, (int(s_bbox[0]),int(s_bbox[1])), (int(s_bbox[2]),int(s_bbox[3])), color_dict[0], 3)
+                        vis_img = cv2.rectangle(vis_img, (int(s_bbox[i][0]),int(s_bbox[i][1])), (int(s_bbox[i][2]),int(s_bbox[i][3])), color_dict[0], 3)
                         print('drawing subject box')
                         
-                        vis_img = cv2.rectangle(vis_img, (int(o_bbox[0]),int(o_bbox[1])), (int(o_bbox[2]),int(o_bbox[3])), color_dict[int(o_class)], 3)
+                        vis_img = cv2.rectangle(vis_img, (int(o_bbox[i][0]),int(o_bbox[i][1])), (int(o_bbox[i][2]),int(o_bbox[i][3])), color_dict[int(o_class)], 3)
                         print('drawing object box')
                         text_size, BaseLine=cv2.getTextSize(self.index_2_cat(verbs[0][0],'hico'),cv2.FONT_HERSHEY_SIMPLEX,1,2)
                         
                         #text height for multiple verbs (interactions)
                         text_size_y = text_size[1] 
-                        cnt = 1
+                        
                         for verb in verbs[0]:    
                             text = self.index_2_cat(verb,'hico')
                             text_size, BaseLine=cv2.getTextSize(text,cv2.FONT_HERSHEY_SIMPLEX,1,2)
-                            if s_bbox[1]-cnt*text_size_y < 0 or s_bbox[0] < 0:
+                            if s_bbox[i][1]-self.count_dict[i]*text_size_y < 0 or s_bbox[i][0] < 0:
                                 break
-                            text_box = [s_bbox[0], s_bbox[1]-cnt*text_size_y, s_bbox[0]+text_size[0],s_bbox[1]-(cnt-1)*text_size_y]
+                            text_box = [s_bbox[i][0], s_bbox[i][1]-self.count_dict[i]*text_size_y, s_bbox[i][0]+text_size[0],s_bbox[i][1]-(self.count_dict[i]-1)*text_size_y]
 
                             #draw text
                             vis_img = cv2.rectangle(vis_img, (int(text_box[0]),int(text_box[1])),(int(text_box[2]),int(text_box[3])), color_dict[int(o_class)], -1)
                             vis_img = cv2.putText(vis_img, text, (int(text_box[0]),int(text_box[3])),cv2.FONT_HERSHEY_SIMPLEX,1,(255,255,255),2,cv2.LINE_AA,False)
-                            print(f'drawing hico action box : {text}, {cnt}')
-                            cnt += 1 
-                        
+                            print('drawing hico action box')
+                            print(f'pair number : {i}, action : {text}, action number : {self.count_dict[i]}')
+                            self.count_dict[i] += 1 
+
                     for i, action in enumerate(vcoco_actions):
                         verbs = np.where(action['verb_score'] > threshold)
                         for verb in verbs[0]:
                             text = self.index_2_cat(verb,'vcoco')
                             text_size, BaseLine=cv2.getTextSize(text,cv2.FONT_HERSHEY_SIMPLEX,1,2)
-                            if s_bbox[1]-cnt*text_size_y < 0 or s_bbox[0] < 0:
+                            
+                            #no subject box case
+                            if i not in s_bbox:
                                 break
-                            text_box = [s_bbox[0], s_bbox[1]-cnt*text_size_y, s_bbox[0]+text_size[0],s_bbox[1]-(cnt-1)*text_size_y]
+
+                            if (s_bbox[i][1]-self.count_dict[i]*text_size_y < 0 or s_bbox[i][0] < 0):
+                                break
+  
+                            text_box = [s_bbox[i][0], s_bbox[i][1]-self.count_dict[i]*text_size_y, s_bbox[i][0]+text_size[0],s_bbox[i][1]-(self.count_dict[i]-1)*text_size_y]
 
                             #draw vcoco verb text
                             vis_img = cv2.rectangle(vis_img, (int(text_box[0]),int(text_box[1])),(int(text_box[2]),int(text_box[3])), color_dict[int(o_class)], -1)
                             vis_img = cv2.putText(vis_img, text, (int(text_box[0]),int(text_box[3])),cv2.FONT_HERSHEY_SIMPLEX,1,(255,255,255),2,cv2.LINE_AA,False)
-                            print(f'drawing vcoco action box : {text}, {cnt}')
-                            cnt += 1 
+                            print('drawing vcoco action box') 
+                            print(f'pair number : {i}, action : {text}, action number : {self.count_dict[i]}')
+                            self.count_dict[i] += 1 
 
         
         else: #for hoi single head inference 
@@ -339,7 +343,7 @@ class Demo():
                 self.frame_num += 1
 
         self.cap.release()
-        self.output_file.release()
+        output_file.release()
         cv2.destroyAllWindows()
 
 if __name__ == '__main__':
