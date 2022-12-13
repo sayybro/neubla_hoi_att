@@ -93,7 +93,7 @@ python convert_parameters.py \
 For V-COCO, convert the pre-trained parameters with the following command.
 ```
 python convert_parameters.py \
-        --load_path logs/checkpoint.pth \
+        --load_path params/detr-r50-e632da11.pth \
         --save_path params/detr-r50-pre-vcoco.pth \
         --dataset vcoco
 ```
@@ -101,7 +101,7 @@ python convert_parameters.py \
 For VAW, convert the pre-trained parameters with the following command.
 ```
 python convert_parameters.py \
-        --load_path logs/checkpoint.pth \
+        --load_path params/detr-r50-e632da11.pth \
         --save_path params/detr-r50-pre-vaw.pth \
         --use_vaw
 ```
@@ -109,7 +109,7 @@ python convert_parameters.py \
 For MTL(attribute + hoi detection), convert the pre-trained parameters with the following command.
 ```
 python convert_parameters.py \
-        --load_path logs/checkpoint.pth \
+        --load_path params/detr-r50-e632da11.pth \
         --save_path params/detr-r50-pre-mtl.pth \
         --use_vaw \
         --dataset vcoco
@@ -140,7 +140,7 @@ CUDA_VISIBLE_DEVICES=1,2 GPUS_PER_NODE=2 ./tool/run_dist_launch.sh 2 configs/mtl
 
 ## Multi task learning evaluation
 ```
-configs/mtl_eval.sh \ 
+configs/mtl_eval.sh \
         --pretrained checkpoints/mtl_all/checkpoint.pth \
         --output_dir test_results/ \
         --mtl_data [\'vcoco\',\'hico\',\'vaw\']
