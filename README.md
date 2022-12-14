@@ -4,7 +4,10 @@
 Our implementation uses external libraries such as NumPy and PyTorch. You can resolve the dependencies with the following command.
 ```
 pip install numpy
-pip install -r requirements.txt
+pip install torch==1.8.1+cu111 torchvision==0.9.1+cu111 torchaudio==0.8.1 -f https://download.pytorch.org/whl/torch_stable.html
+pip install git+https://github.com/cocodataset/cocoapi.git#subdirectory=PythonAPI&egg=pycocotools
+pip install git+https://github.com/cocodataset/panopticapi.git#egg=panopticapi
+pip install scipy cython submitit
 ```
 Note that this command may dump errors during installing pycocotools, but the errors can be ignored.
 
