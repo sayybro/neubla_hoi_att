@@ -13,6 +13,8 @@ import pandas as pd
 from index2cat import vcoco_index_2_cat, hico_index_2_cat, vaw_index_2_cat, color_index
 import json
 
+device = 'cuda' if torch.cuda.is_available() else 'cpu'
+
 class Demo():
     def __init__(self, args):
         self.video_path = args.video_file
@@ -43,11 +45,11 @@ class Demo():
             dtype = 'hoi'
         
         if 'hico' in dataset and 'vcoco' in dataset:
-            output_hico = model(sample.unsqueeze(0), dtype, 'hico')
-            output_vcoco = model(sample.unsqueeze(0), dtype, 'vcoco')
+            output_hico = model(sample.unsqueeze(0).to(device), dtype, 'hico')
+            output_vcoco = model(sample.unsqueeze(0).to(device), dtype, 'vcoco')
             return output_hico, output_vcoco
         else:
-            output = model(sample.unsqueeze(0), dtype, dataset)
+            output = model(sample.unsqueeze(0).to(device), dtype, dataset)
             return output
 
     def valid_att_idxs(self, anno_file):
@@ -301,8 +303,9 @@ class Demo():
         frame_size = (frame_width, frame_height)
         orig_size = torch.as_tensor([frame_height,frame_width]).unsqueeze(0).to('cuda')
         output_file = cv2.VideoWriter(self.output_dir, self.fourcc, self.fps, frame_size)
-        checkpoint = torch.load(self.checkpoint, map_location='cpu')
+        checkpoint = torch.load(self.checkpoint, map_location=device)
         model.load_state_dict(checkpoint['model'],strict=False)
+        model.to(device)
         color_dict = self.make_color_dict(self.num_obj_classes)
         while(True):
 
