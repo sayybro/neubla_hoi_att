@@ -13,9 +13,35 @@ import pandas as pd
 from index2cat import vcoco_index_2_cat, hico_index_2_cat, vaw_index_2_cat
 import json
 
+import cv2
+import copy
+import numpy as np
+from PIL import Image, ImageDraw, ImageFont
+
+
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
-class Demo():
+RED = (255, 0, 0)
+GREEN = (0, 255, 0)
+BLUE = (0, 0, 255)
+CYAN = (0, 255, 255)
+YELLOW = (255, 255, 0)
+ORANGE = (255, 165, 0)
+PURPLE = (255, 0, 255)
+WHITE = (255, 255, 255)
+BLACK = (0, 0, 0)
+
+PART_COLOR_LIST = [GREEN, CYAN, YELLOW, ORANGE, PURPLE, RED]
+
+BROWN = (128, 42, 42)
+JACKIE_BLUE = (11, 23, 70)
+YELLOW_BROWN = (240, 230, 140)
+SOMECOLOR = (255, 127, 127)
+STRAWBERRY = (135, 38, 87)
+DARKGREEN = (48, 128, 20)
+ID_COLOR_LIST = [DARKGREEN, BROWN, STRAWBERRY, JACKIE_BLUE, BLUE]
+
+class Demo2():
     def __init__(self, args):
         self.video_path = args.video_file
         self.fps = args.fps
@@ -26,7 +52,13 @@ class Demo():
         self.frame_num = 0
         self.inf_type = args.inf_type
         self.num_obj_classes = args.num_obj_classes
+        self.font_size = 10
+        self.sidebar_size = 350
 
+    def RGB2BGR(self,color):
+        R,G,B = color[0], color[1], color[2]
+        return (B,G,R)
+        
     def hoi_att_transforms(self, image_set):
         transforms = make_vcoco_transforms(image_set)
         return transforms
@@ -109,8 +141,17 @@ class Demo():
 
 
     def draw_img(self, img, output_i, top_k, threshold, color_dict, inf_type):
-        vis_img = img.copy()
 
+        #img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+        im_shape = list(img.shape)
+        
+        # Construct a black sidebar.
+        ones_shape = copy.deepcopy(im_shape)
+        ones_shape[1] = self.sidebar_size
+        image_ones = np.ones(ones_shape, dtype=img.dtype) * 0
+        image = np.concatenate((img, image_ones), axis=1)
+        vis_img = image.copy()
+        
         #for attribute inference
         if inf_type == 'vaw':
             list_predictions = []
@@ -250,7 +291,20 @@ class Demo():
                 df = pd.DataFrame(list_actions)
                 df = df.sort_values(by=['max_verb_score'],ascending=False).iloc[:top_k]
                 list_actions = df.to_dict('records')
+                verb_cnt = {}
                 for i, action in enumerate(list_actions):
+                    if i not in verb_cnt.keys():
+                        verb_cnt[i] = 0
+
+                    #visualize sidebar
+                    id_text = f'ID:{i}'
+                    ID_text_size, BaseLine=cv2.getTextSize(id_text,cv2.FONT_HERSHEY_SIMPLEX,1,2)
+                    cnt = [v for k,v in verb_cnt.items()]
+                    line_box = [img.shape[1],((sum(cnt)+2*i)*ID_text_size[1]),vis_img.shape[1],((sum(cnt)+2*i)*ID_text_size[1])]
+                    id_box = [img.shape[1], line_box[3]+self.font_size, img.shape[1]+ID_text_size[0], line_box[3]+self.font_size+ID_text_size[1]]
+                    vis_img = cv2.line(vis_img, (line_box[0],line_box[1]),(line_box[2],line_box[3]), self.RGB2BGR(CYAN), 3)
+                    vis_img = cv2.putText(vis_img, id_text, (int(id_box[0]),int(id_box[3])),cv2.FONT_HERSHEY_SIMPLEX,1,self.RGB2BGR(RED),2,cv2.LINE_AA,False)
+
                     verbs = np.where(action['verb_score'] > threshold)
                     s_bbox = action['subject_box']
                     o_bbox = action['object_box']
@@ -263,25 +317,32 @@ class Demo():
             
                     #text height for multiple verbs (interactions)
                     text_size_y = text_size[1] 
-                    cnt = 1
+                    #cnt = 1
+
+                    text_box = [s_bbox[0], s_bbox[1]-ID_text_size[1], s_bbox[0]+ID_text_size[0],s_bbox[1]]
+                    vis_img = cv2.rectangle(vis_img, (int(text_box[0]),int(text_box[1])),(int(text_box[2]),int(text_box[3])), color_dict[int(o_class)], -1)
+                    vis_img = cv2.putText(vis_img, id_text, (int(text_box[0]),int(text_box[3])),cv2.FONT_HERSHEY_SIMPLEX,1,self.RGB2BGR(RED),2,cv2.LINE_AA,False)
                     for verb in verbs[0]:
+                        verb_cnt[i] += 1
                         text = self.index_2_cat(verb,args.inf_type)
-                        text_size, BaseLine=cv2.getTextSize(text,cv2.FONT_HERSHEY_SIMPLEX,1,2)
-                        if s_bbox[1]-cnt*text_size_y < 0 or s_bbox[0] < 0:
+                        #text_size, BaseLine=cv2.getTextSize(text,cv2.FONT_HERSHEY_SIMPLEX,1,2)
+                     
+                        if s_bbox[1]-verb_cnt[i]*text_size_y < 0 or s_bbox[0] < 0:
                             break
 
-                        #draw text
-                        text_box = [s_bbox[0], s_bbox[1]-cnt*text_size_y, s_bbox[0]+text_size[0],s_bbox[1]-(cnt-1)*text_size_y]
-                        vis_img = cv2.rectangle(vis_img, (int(text_box[0]),int(text_box[1])),(int(text_box[2]),int(text_box[3])), color_dict[int(o_class)], -1)
-                        vis_img = cv2.putText(vis_img, text, (int(text_box[0]),int(text_box[3])),cv2.FONT_HERSHEY_SIMPLEX,1,(255,255,255),2,cv2.LINE_AA,False)
-                        print(f'drawing action box : {text}, {cnt}')
-                        cnt += 1 
+                        text_box2 = [img.shape[1], int(id_box[3])+(verb_cnt[i]-1)*(ID_text_size[1]), img.shape[1]+ID_text_size[0], int(id_box[3])+(verb_cnt[i])*(ID_text_size[1])]
+                        vis_img = cv2.putText(vis_img, text, (int(text_box2[0]),int(text_box2[3])),cv2.FONT_HERSHEY_SIMPLEX,1,self.RGB2BGR(GREEN),2,cv2.LINE_AA,False)
+                        
+                    
+                        print(f'drawing action box : {text}, {verb_cnt[i]}')
+                        
+                        
         return vis_img
     
     def save_video(self, args):
         frame_width = int(self.cap.get(cv2.CAP_PROP_FRAME_WIDTH))	
         frame_height = int(self.cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
-        frame_size = (frame_width, frame_height)
+        frame_size = (frame_width+self.sidebar_size, frame_height)
         orig_size = torch.as_tensor([frame_height,frame_width]).unsqueeze(0).to('cuda')
         output_file = cv2.VideoWriter(self.output_dir, self.fourcc, self.fps, frame_size)
         checkpoint = torch.load(self.checkpoint, map_location=device)
@@ -323,12 +384,12 @@ class Demo():
                 self.frame_num += 1
 
         self.cap.release()
-        self.output_file.release()
+        output_file.release()
         cv2.destroyAllWindows()
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser('video inference script', parents=[get_args_parser()])
     args = parser.parse_args()
     model, _, postprocessors = build_model(args)
-    demo = Demo(args)
+    demo = Demo2(args)
     demo.save_video(args)
