@@ -129,25 +129,16 @@ class DETRHOI(nn.Module):
 
     def forward(self, samples: NestedTensor, dtype: str='', dataset:str=''):
         
-        #samples.tensors.shape : torch.Size([8, 3, 1055, 928])
-        
-        #NestedTensor가 아니면 samples를 NestedTensor로 변환 
         if not isinstance(samples, NestedTensor): #type(samples):<class 'util.misc.NestedTensor'>
-            samples = nested_tensor_from_tensor_list(samples)
-        
-        #features[0].tensors.shape : torch.Size([8, 2048, 33, 29])
-        #pos[0].shape : torch.Size([8, 256, 33, 29])
+            samples = nested_tensor_from_tensor_list(samples)   
+
         features, pos = self.backbone(samples)
-        
-        #features[-1].tensors.shape : torch.Size([8, 2048, 33, 29])
-        #src.shape : torch.Size([8, 2048, 33, 29])
-        #mask.shape : torch.Size([8, 33, 29])
+
         src, mask = features[-1].decompose()
         assert mask is not None
-        #hs = self.transformer(self.input_proj(src), mask, self.query_embed.weight, pos[-1])[0]
-
+  
         if self.mtl_divide:
-
+            
             if dtype == 'att':
                 hs = self.transformer.forward_a(self.input_proj(src), mask, self.query_embed.weight, pos[-1], dtype)[0]
             
@@ -163,16 +154,18 @@ class DETRHOI(nn.Module):
 
 
         if self.mtl:
+            #import pdb; pdb.set_trace()
             if dtype=='att':
                 outputs_class = self.att_class_embed(hs)            
                 # outputs_obj_class = self.obj_class_embed(hs)
             elif dtype=='hoi':
-                
                 if dataset == 'hico': #hs : torch.Size([6, 8, 100, 256])
                     #outputs_class.shape : torch.Size([6, 8, 100, 117])
                     outputs_class = self.hico_verb_class_embed(hs)
                 elif dataset =='vcoco':
                     outputs_class = self.vcoco_verb_class_embed(hs)            
+            # else:
+            #     if dataset == 'vcoco'
 
             #outputs_obj_class.shape : torch.Size([6, 8, 100, 82])
             outputs_obj_class = self.obj_class_embed(hs)

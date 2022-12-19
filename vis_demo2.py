@@ -30,7 +30,7 @@ ORANGE = (255, 165, 0)
 PURPLE = (255, 0, 255)
 WHITE = (255, 255, 255)
 BLACK = (0, 0, 0)
-
+SKYBLUE = (153,255,255)
 PART_COLOR_LIST = [GREEN, CYAN, YELLOW, ORANGE, PURPLE, RED]
 
 BROWN = (128, 42, 42)
@@ -69,15 +69,28 @@ class Demo2():
         sample = img.copy()
         sample, _ = transform(sample, None)
         dataset = args.inf_type #hico or vcoco or hoi or vaw
+        
         if dataset == 'vaw':
             dtype = 'att'
         else: 
             dtype = 'hoi'
         
         if 'hico' in dataset and 'vcoco' in dataset:
-            output_hico = model(sample.unsqueeze(0).to(device), dtype, 'hico')
-            output_vcoco = model(sample.unsqueeze(0).to(device), dtype, 'vcoco')
+            output_hico = model(sample.unsqueeze(0).to(device), 'hoi', 'hico')
+            output_vcoco = model(sample.unsqueeze(0).to(device), 'hoi', 'vcoco')
             return output_hico, output_vcoco
+        
+        elif 'hico' in dataset and 'vaw' in dataset:
+            output_hico = model(sample.unsqueeze(0).to(device), 'hoi', 'hico')
+            output_vaw = model(sample.unsqueeze(0).to(device), 'att', 'vaw')
+            return output_hico, output_vaw
+        
+        elif 'vcoco' in dataset and 'vaw' in dataset:
+            #import pdb; pdb.set_trace()
+            output_vcoco = model(sample.unsqueeze(0).to(device), 'hoi', 'vcoco')
+            output_vaw = model(sample.unsqueeze(0).to(device), 'att', 'vaw')
+            return output_vcoco, output_vaw
+
         else:
             output = model(sample.unsqueeze(0).to(device), dtype, dataset)
             return output
@@ -115,6 +128,34 @@ class Demo2():
             for h_label, o_label, pair_score in zip(h_labels, o_labels, pair_scores):
                 output_i['hoi_predictions'].append({'subject_id':h_label,'object_id':o_label,'max_score':max(pair_score),'pair_score':pair_score})
         
+
+        elif ('vcoco' in args.inf_type and 'vaw' in args.inf_type) or ('hico' in args.inf_type and 'vaw' in args.inf_type):
+            if 'verb_scores' in results.keys():
+                boxes,labels,pair_scores = list(map(lambda x: x.cpu().numpy(), [results['boxes'], results['labels'], results['verb_scores']]))
+                output_i={}
+                output_i['box_predictions']=[]
+                output_i['hoi_predictions']=[]
+                
+                h_boxes = boxes[:100]
+                h_labels = labels[:100]
+                o_boxes = boxes[100:]
+                o_labels = labels[100:]
+
+                for h_box, o_box in zip(h_boxes, o_boxes):
+                    output_i['box_predictions'].append({'h_bbox':h_box.tolist(), 'o_bbox': o_box.tolist()})
+
+                for h_label, o_label, pair_score in zip(h_labels, o_labels, pair_scores):
+                    output_i['hoi_predictions'].append({'subject_id':h_label,'object_id':o_label,'max_score':max(pair_score),'pair_score':pair_score})
+            else:
+                boxes,labels,attr_scores = list(map(lambda x: x.cpu().numpy(), [results['boxes'], results['labels'], results['attr_scores']]))
+                output_i={}
+                output_i['predictions']=[]
+                attribute_freq = 'data/vaw/annotations/vaw_coco_train_cat_info.json'
+                valid_masks = self.valid_att_idxs(attribute_freq)
+                for box, label,attr_score in zip(boxes,labels,attr_scores):
+                    attr_score *= valid_masks
+                    output_i['predictions'].append({'bbox':box.tolist(), 'object_id': label, 'max_score':max(attr_score), 'pair_score':attr_score})
+
         else:
             boxes,labels,attr_scores = list(map(lambda x: x.cpu().numpy(), [results['boxes'], results['labels'], results['attr_scores']]))
             output_i={}
@@ -141,8 +182,7 @@ class Demo2():
 
 
     def draw_img(self, img, output_i, top_k, threshold, color_dict, inf_type):
-
-        #img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+        
         im_shape = list(img.shape)
         
         # Construct a black sidebar.
@@ -338,11 +378,150 @@ class Demo2():
                         
                         
         return vis_img
-    
+
+
+    def draw_img_all(self, img, output_i, top_k, threshold, color_dict, inf_type):
+        
+        #Construct two black sidebar (att + hoi)
+        im_shape = list(img.shape)
+        ones_shape = copy.deepcopy(im_shape)
+        ones_shape[1] = self.sidebar_size
+        image_ones = np.ones(ones_shape, dtype=img.dtype) * 0
+        image = np.concatenate((img, image_ones, image_ones), axis=1)
+        vis_img = image.copy()      
+        list_actions = []
+        for box, hoi in zip(output_i['hoi']['box_predictions'], output_i['hoi']['hoi_predictions']):
+
+            #prediction threshold
+            if hoi['max_score'] < threshold:
+                continue
+            
+            subject_id = hoi['subject_id']
+            subject_box = box['h_bbox']
+            object_id = hoi['object_id']
+            object_box = box['o_bbox']
+            verb_score = hoi['pair_score']
+            max_verb_score = hoi['max_score']
+            single_out = {'subject_box':np.array(subject_box), 'object_box':np.array(object_box), 'subject_id':np.array(subject_id), 'object_id':np.array(object_id), 'verb_score':np.array(verb_score), 'max_verb_score':np.array(max_verb_score)}
+            list_actions.append(single_out)
+        
+        if list_actions:
+            df = pd.DataFrame(list_actions)
+            df = df.sort_values(by=['max_verb_score'],ascending=False).iloc[:top_k]
+            list_actions = df.to_dict('records')
+            verb_cnt = {}
+            for i, action in enumerate(list_actions):
+                if i not in verb_cnt.keys():
+                    verb_cnt[i] = 0
+
+                #visualize sidebar
+                id_text = f'Interaction ID:{i}'
+                ID_text_size, BaseLine=cv2.getTextSize(id_text,cv2.FONT_HERSHEY_SIMPLEX,1,2)
+                cnt = [v for k,v in verb_cnt.items()]
+                #import pdb; pdb.set_trace()
+                line_box = [img.shape[1]+self.sidebar_size,((sum(cnt)+2*i)*ID_text_size[1]),vis_img.shape[1],((sum(cnt)+2*i)*ID_text_size[1])]
+                id_box = [img.shape[1]+self.sidebar_size, line_box[3]+self.font_size, img.shape[1]+self.sidebar_size+ID_text_size[0], line_box[3]+self.font_size+ID_text_size[1]]
+                vis_img = cv2.line(vis_img, (line_box[0],line_box[1]),(line_box[2],line_box[3]), self.RGB2BGR(CYAN), 3)
+                vis_img = cv2.putText(vis_img, id_text, (int(id_box[0]),int(id_box[3])),cv2.FONT_HERSHEY_SIMPLEX,1,self.RGB2BGR(SKYBLUE),2,cv2.LINE_AA,False)
+
+                verbs = np.where(action['verb_score'] > threshold)
+                s_bbox = action['subject_box']
+                o_bbox = action['object_box']
+                o_class = action['object_id']
+                vis_img = cv2.rectangle(vis_img, (int(s_bbox[0]),int(s_bbox[1])), (int(s_bbox[2]),int(s_bbox[3])), color_dict[0], 3)
+                print('drawing subject box')
+                vis_img = cv2.rectangle(vis_img, (int(o_bbox[0]),int(o_bbox[1])), (int(o_bbox[2]),int(o_bbox[3])), color_dict[int(o_class)], 3)
+                print('drawing object box')
+                text_size, BaseLine=cv2.getTextSize(self.index_2_cat(verbs[0][0],args.inf_type),cv2.FONT_HERSHEY_SIMPLEX,1,2)
+        
+
+                text_box = [s_bbox[0], s_bbox[1]-ID_text_size[1], s_bbox[0]+ID_text_size[0],s_bbox[1]]
+                vis_img = cv2.rectangle(vis_img, (int(text_box[0]),int(text_box[1])),(int(text_box[2]),int(text_box[3])), color_dict[int(o_class)], -1)
+                vis_img = cv2.putText(vis_img, id_text, (int(text_box[0]),int(text_box[3])),cv2.FONT_HERSHEY_SIMPLEX,1,self.RGB2BGR(SKYBLUE),2,cv2.LINE_AA,False)
+                for verb in verbs[0]:
+                    verb_cnt[i] += 1
+                    #import pdb; pdb.set_trace()
+                    if 'vcoco' in inf_type:
+                        text = self.index_2_cat(verb,'vcoco')
+                    elif 'hico' in inf_type:
+                        text = self.index_2_cat(verb,'hico')
+                    #text_size, BaseLine=cv2.getTextSize(text,cv2.FONT_HERSHEY_SIMPLEX,1,2)
+                    
+                    text_box2 = [img.shape[1]+self.sidebar_size, int(id_box[3])+(verb_cnt[i]-1)*(ID_text_size[1]), img.shape[1]+self.sidebar_size+ID_text_size[0], int(id_box[3])+(verb_cnt[i])*(ID_text_size[1])]
+                    vis_img = cv2.putText(vis_img, text, (int(text_box2[0]),int(text_box2[3])),cv2.FONT_HERSHEY_SIMPLEX,1,self.RGB2BGR(GREEN),2,cv2.LINE_AA,False)
+                
+                    print(f'drawing action box : {text}, {verb_cnt[i]}')
+
+        list_predictions = []
+        for predict in output_i['att']['predictions']:
+
+            #prediction threshold
+            if predict['max_score'] < threshold:
+                continue
+            object_id = predict['object_id']
+            object_box = predict['bbox']
+            attr_score = predict['pair_score']
+            max_attr_score = predict['max_score']
+            single_out = {'object_box':np.array(object_box), 'object_id':np.array(object_id), 'attr_score':np.array(attr_score), 'max_attr_score':np.array(max_attr_score)}
+            list_predictions.append(single_out)
+        if list_predictions:
+            df = pd.DataFrame(list_predictions)
+            df = df.sort_values(by=['max_attr_score'],ascending=False).iloc[:top_k]
+            list_predictions = df.to_dict('records')
+            attr_cnt = {}
+            for i, prediction in enumerate(list_predictions):
+                if i not in attr_cnt.keys():
+                    attr_cnt[i] = 0
+
+                #visualize sidebar
+                id_text = f'Attribute ID:{i}'
+                ID_text_size, BaseLine=cv2.getTextSize(id_text,cv2.FONT_HERSHEY_SIMPLEX,1,2)
+                cnt = [v for k,v in attr_cnt.items()]
+                #import pdb; pdb.set_trace()
+                line_box = [img.shape[1],((sum(cnt)+2*i)*ID_text_size[1]),vis_img.shape[1]-self.sidebar_size,((sum(cnt)+2*i)*ID_text_size[1])]
+                id_box = [img.shape[1], line_box[3]+self.font_size, img.shape[1]-self.sidebar_size+ID_text_size[0], line_box[3]+self.font_size+ID_text_size[1]]
+                vis_img = cv2.line(vis_img, (line_box[0],line_box[1]),(line_box[2],line_box[3]), self.RGB2BGR(YELLOW), 3)
+                vis_img = cv2.putText(vis_img, id_text, (int(id_box[0]),int(id_box[3])),cv2.FONT_HERSHEY_SIMPLEX,1,self.RGB2BGR(ORANGE),2,cv2.LINE_AA,False)
+                
+                
+                attributes = np.where(prediction['attr_score'] > threshold)
+                o_bbox = prediction['object_box']
+                o_class = prediction['object_id']                
+                vis_img = cv2.rectangle(vis_img, (int(o_bbox[0]),int(o_bbox[1])), (int(o_bbox[2]),int(o_bbox[3])), color_dict[int(o_class)], 3)
+                print(f'drawing att object box')
+                
+                #import pdb; pdb.set_trace()
+  #              text_size, BaseLine=cv2.getTextSize(self.index_2_cat(attributes[0][0],args.inf_type),cv2.FONT_HERSHEY_SIMPLEX,1,2)
+
+                #text height for multiple attributes
+                text_box = [o_bbox[0], o_bbox[1]-ID_text_size[1], o_bbox[0]+ID_text_size[0],o_bbox[1]]
+                vis_img = cv2.rectangle(vis_img, (int(text_box[0]),int(text_box[1])),(int(text_box[2]),int(text_box[3])), color_dict[int(o_class)], -1)
+                vis_img = cv2.putText(vis_img, id_text, (int(text_box[0]),int(text_box[3])),cv2.FONT_HERSHEY_SIMPLEX,1,self.RGB2BGR(ORANGE),2,cv2.LINE_AA,False)
+                for attr in attributes[0]:
+                    attr_cnt[i] += 1
+                    text = self.index_2_cat(attr,'vaw')
+                    text_size, BaseLine=cv2.getTextSize(text,cv2.FONT_HERSHEY_SIMPLEX,1,2)
+                    # if o_bbox[1]-cnt*text_size_y < 0 or o_bbox[0] < 0:
+                    #     break
+                    #text_box = [o_bbox[0], o_bbox[1]-cnt*text_size_y, o_bbox[0]+text_size[0],o_bbox[1]-(cnt-1)*text_size_y]
+
+                    #draw text
+                    text_box2 = [img.shape[1], int(id_box[3])+(attr_cnt[i]-1)*(ID_text_size[1]), img.shape[1]-self.sidebar_size+ID_text_size[0], int(id_box[3])+(attr_cnt[i])*(ID_text_size[1])]
+                    vis_img = cv2.putText(vis_img, text, (int(text_box2[0]),int(text_box2[3])),cv2.FONT_HERSHEY_SIMPLEX,1,self.RGB2BGR(GREEN),2,cv2.LINE_AA,False)
+                    print(f'drawing attribute box : {text}, {attr_cnt[i]}')
+                    #cnt += 1 
+        return vis_img
+
+
     def save_video(self, args):
         frame_width = int(self.cap.get(cv2.CAP_PROP_FRAME_WIDTH))	
         frame_height = int(self.cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
-        frame_size = (frame_width+self.sidebar_size, frame_height)
+        #import pdb; pdb.set_trace()
+        if args.all:
+            #import pdb; pdb.set_trace()
+            frame_size = (frame_width+2*self.sidebar_size, frame_height)
+        else:
+            frame_size = (frame_width+self.sidebar_size, frame_height)
         orig_size = torch.as_tensor([frame_height,frame_width]).unsqueeze(0).to('cuda')
         output_file = cv2.VideoWriter(self.output_dir, self.fourcc, self.fps, frame_size)
         checkpoint = torch.load(self.checkpoint, map_location=device)
@@ -372,6 +551,37 @@ class Demo2():
                 vis_img = self.draw_img(frame,output_i,top_k=args.top_k,threshold=args.threshold,color_dict=color_dict,inf_type=args.inf_type)
                 output_file.write(vis_img)
                 self.frame_num += 1
+            elif 'hico' in self.inf_type and 'vaw' in self.inf_type:
+                outputs_hico, outputs_vaw = self.inference_for_vid(model, frame, args)
+                preds = []
+                results_hico = postprocessors(outputs_hico, orig_size)
+                results_vcoco = postprocessors(outputs_vcoco, orig_size)
+                preds.extend(list(itertools.chain.from_iterable(utils.all_gather(results_hico))))
+                preds.extend(list(itertools.chain.from_iterable(utils.all_gather(results_vcoco))))
+                output_hico = self.change_format(preds[0], args)
+                output_vcoco = self.change_format(preds[1], args)
+                output_i = []
+                output_i.append(output_hico)
+                output_i.append(output_vcoco)
+                vis_img = self.draw_img_all(frame,output_i,top_k=args.top_k,threshold=args.threshold,color_dict=color_dict,inf_type=args.inf_type)
+                output_file.write(vis_img)
+                self.frame_num += 1
+            elif 'vcoco' in self.inf_type and 'vaw' in self.inf_type:
+                outputs_vcoco, outputs_vaw = self.inference_for_vid(model, frame, args)
+                preds = []
+                results_vcoco = postprocessors(outputs_vcoco, orig_size)
+                results_vaw = postprocessors(outputs_vaw, orig_size)
+                preds.extend(list(itertools.chain.from_iterable(utils.all_gather(results_vcoco))))
+                preds.extend(list(itertools.chain.from_iterable(utils.all_gather(results_vaw))))
+                output_vcoco = self.change_format(preds[0], args)
+                output_vaw = self.change_format(preds[1], args)
+                output_i = {}
+                output_i['hoi'] = output_vcoco
+                output_i['att'] = output_vaw
+                vis_img = self.draw_img_all(frame,output_i,top_k=args.top_k,threshold=args.threshold,color_dict=color_dict,inf_type=args.inf_type)
+                output_file.write(vis_img)
+                self.frame_num += 1
+
 
             else:
                 outputs = self.inference_for_vid(model, frame, args)
