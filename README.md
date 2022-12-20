@@ -162,7 +162,7 @@ configs/mtl_eval.sh \
 "test_mAP": 0.0524253535493328, "test_mAP rare": 0.029776368059209662, "test_mAP non-rare": 0.07093753803669373, "test_mean max recall": 0.37233911507467743
 ```
 
-# Video demo inference
+# Video demo version 1
 ## For vcoco verb inference
 ```
 python vis_demo.py \
@@ -234,6 +234,18 @@ python vis_demo.py \
         --color
 ```  
 
+# Video demo version 2 
+python vis_demo2.py \
+        --checkpoint checkpoints/mtl_all/checkpoint.pth \
+        --inf_type [\'vcoco\',\'vaw\'] \
+        --mtl_data [\'vcoco\',\'vaw\'] \
+        --mtl \
+        --video_file video/cycle.mp4 \
+        --show_vid \
+        --top_k 2 \
+        --threshold 0.4 \
+        --all
+        
 ## Citation
 Our implementation is based on the official code QPIC
 ```
