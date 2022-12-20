@@ -235,6 +235,8 @@ python vis_demo.py \
 ```  
 
 # Video demo version 2 
+![cycle](https://user-images.githubusercontent.com/87055052/208564037-b6054ccd-bc28-41ea-bc77-ce1195a19f33.gif)
+```
 python vis_demo2.py \
         --checkpoint checkpoints/mtl_all/checkpoint.pth \
         --inf_type [\'vcoco\',\'vaw\'] \
@@ -245,7 +247,7 @@ python vis_demo2.py \
         --top_k 2 \
         --threshold 0.4 \
         --all
-        
+```        
 ## Citation
 Our implementation is based on the official code QPIC
 ```
