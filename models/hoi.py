@@ -128,7 +128,7 @@ class DETRHOI(nn.Module):
         self.aux_loss = aux_loss
 
     def forward(self, samples: NestedTensor, dtype: str='', dataset:str=''):
-        
+        #import pdb; pdb.set_trace()
         if not isinstance(samples, NestedTensor): #type(samples):<class 'util.misc.NestedTensor'>
             samples = nested_tensor_from_tensor_list(samples)   
 

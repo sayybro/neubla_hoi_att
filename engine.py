@@ -61,15 +61,33 @@ def train_one_epoch(model: torch.nn.Module, criterion: torch.nn.Module,
         assert len(set([t['dataset'] for t in targets]))==1
         samples = samples.to(device)
         targets = [{k: v.to(device)  if type(v)!=str else v for k, v in t.items()} for t in targets]
-        target_verb = [target['verb_labels'] for target in targets]
-        #import pdb; pdb.set_trace()
-        #inputs, targets_a, targets_b, lam = mixup_data(samples.tensors, target_verb, 0.2) #inputs, targets,args.alpha
-
         dtype=targets[0]['type']
         dataset=targets[0]['dataset']
 
+        if args.mixup:
+            target_verb = [target['verb_labels'] for target in targets]
+            mixed_x_a, mixed_x_b, y_a, y_b, lam = mixup_data(samples.tensors, target_verb, 0.2) 
+            x_a, x_b = [], []
+            for samples_a, samples_b in zip(mixed_x_a,mixed_x_b):
+                x_a.append(torch.stack(samples_a))
+                x_b.append(torch.stack(samples_b))     
+            y_a_list, y_b_list = [], []
+            for labels_a, labels_b in zip(y_a,y_b):
+                #import pdb; pdb.set_trace()
+                y_a_list.append(labels_a)
+                y_b_list.append(labels_b)     
+            #import pdb; pdb.set_trace()
+            m_x_a = torch.cat(x_a,dim=0).to(device)
+            m_x_b = torch.cat(x_b,dim=0).to(device)
+            m_y_a = torch.cat(y_a_list,dim=0).to(device)
+            m_y_b = torch.cat(y_b_list,dim=0).to(device)
+            import random
+            indices = random.sample(range(len(m_x_a)),3)
+            outputs_a = model(m_x_a[indices],dtype,dataset)
+            outputs_b = model(m_x_b[indices],dtype,dataset)
+            import pdb; pdb.set_trace()
+        #samples [<class 'util.misc.NestedTensor'>] : torch.Size([8, 3, 979, 899])
         outputs = model(samples,dtype,dataset)
-        #outputs = model(samples)
         loss_dict = criterion(outputs, targets)
         weight_dict = criterion.weight_dict
         losses = sum(loss_dict[k] * weight_dict[k] for k in loss_dict.keys() if k in weight_dict)
