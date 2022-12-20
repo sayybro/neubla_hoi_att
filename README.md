@@ -163,6 +163,7 @@ configs/mtl_eval.sh \
 ```
 
 # Video demo version 1
+![cycle2](https://user-images.githubusercontent.com/87055052/208564990-197d157c-c830-4cae-9557-9d7900f1b8c6.gif)
 ## For vcoco verb inference
 ```
 python vis_demo.py \
