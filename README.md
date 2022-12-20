@@ -236,6 +236,8 @@ python vis_demo.py \
 
 # Video demo version 2 
 ![cycle](https://user-images.githubusercontent.com/87055052/208564037-b6054ccd-bc28-41ea-bc77-ce1195a19f33.gif)
+
+## For hoi+attribute inference
 ```
 python vis_demo2.py \
         --checkpoint checkpoints/mtl_all/checkpoint.pth \
@@ -246,6 +248,7 @@ python vis_demo2.py \
         --show_vid \
         --top_k 2 \
         --threshold 0.4 \
+        --fps 30 \
         --all
 ```        
 ## Citation
