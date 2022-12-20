@@ -176,6 +176,10 @@ def get_args_parser():
     parser.add_argument('--group_name', default='Neubla')
     parser.add_argument('--run_name', default='train_num_1')
 
+    #mix up mode
+    parser.add_argument('--mixup', action='store_true',help='mixup')
+
+
     #for video vis
     parser.add_argument('--output_dir', default='output_video/example2.mp4',help='output path')
     parser.add_argument('--show_vid', action='store_true',help='check video inference')
@@ -185,6 +189,7 @@ def get_args_parser():
     parser.add_argument('--top_k', default=1,type=int,help='top_k value')
     parser.add_argument('--threshold', default=0.3,type=float,help='threshold value')
     parser.add_argument('--fps', default=30,type=int,help='fps')
+    parser.add_argument('--all', action='store_true',help='check hoi+attribute inference')
     parser.add_argument('--color', action='store_true',help='only color inference for vaw')
     
     

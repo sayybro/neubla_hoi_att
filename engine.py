@@ -25,7 +25,7 @@ from datasets.panoptic_eval import PanopticEvaluator
 from datasets.hico_eval import HICOEvaluator
 from datasets.vcoco_eval import VCOCOEvaluator, VCOCOEvaluator_orig
 from datasets.vaw_eval import VAWEvaluator
-
+from mixup.mixup import mixup_data, mixup_criterion
 
 
 
@@ -38,42 +38,10 @@ def train_one_epoch(model: torch.nn.Module, criterion: torch.nn.Module,
     
     #metric_logger : MetricLogger(object) class의 instance 
     metric_logger = utils.MetricLogger(delimiter="") #default 값 self.delimiter = '\t'
-    
-    '''
-    SmoothedValue
-    Track a series of values and provide access to smoothed values over a
-    window or the global series average.
-    
-    '''
-
-    '''
-    self.meters = defaultdict(SmoothedValue)
-    -> defaultdict : dict 만드는 dict 클래스의 서브 클래스
-    -> 인자로 주어진 객체의 기본값을 딕셔너리 값의 초깃값으로 지정할 수 있다.
-    -> 처음 키를 지정할 때 값을 주지 않으면 해당 키에 대한 value 값을 디폴트 값을 지정함
-    -> 디폴트 값 int면 0, list면 [], dict면 {} 이런식
-
-    def add_meter(self, name, meter):
-    self.meters[name] = meter
-    '''
     metric_logger.add_meter('lr', utils.SmoothedValue(window_size=1, fmt='{value:.6f}'))
     
-    '''
-    hasattr(), object의 속성(attribute) 존재를 확인하는 함수
-    hasattr(object, name)
-    argument로 넘겨준 object 에 name 속성이 존재하면 True, 아니면 False를 반환
-    class sample:
-        def __init__(self, x):
-                self.x = x
-    c = sample(1)
-    c.x    
-    hasattr(c,'x')
-    True  
-    hasattr(c,'y')
-    False       
-    '''
 
-    #criterion에 loss_labels 속성이 존재하면 True
+
     if hasattr(criterion, 'loss_labels'):
         metric_logger.add_meter('class_error', utils.SmoothedValue(window_size=1, fmt='{value:.2f}'))
     # else:
@@ -91,16 +59,15 @@ def train_one_epoch(model: torch.nn.Module, criterion: torch.nn.Module,
     for samples,targets in metric_logger.log_every(data_loader, print_freq, header):
         # print([t['dataset'] for t in targets])
         assert len(set([t['dataset'] for t in targets]))==1
-  
         samples = samples.to(device)
         targets = [{k: v.to(device)  if type(v)!=str else v for k, v in t.items()} for t in targets]
-        
-        #import pdb;pdb.set_trace()
+        target_verb = [target['verb_labels'] for target in targets]
+        #import pdb; pdb.set_trace()
+        #inputs, targets_a, targets_b, lam = mixup_data(samples.tensors, target_verb, 0.2) #inputs, targets,args.alpha
+
         dtype=targets[0]['type']
         dataset=targets[0]['dataset']
 
-        #import pdb; pdb.set_trace()
-        #import pdb; pdb.set_trace()
         outputs = model(samples,dtype,dataset)
         #outputs = model(samples)
         loss_dict = criterion(outputs, targets)
@@ -241,7 +208,8 @@ def evaluate_hoi(dataset_file, model, postprocessors, data_loader, subject_categ
     indices = []
     for samples, targets in metric_logger.log_every(data_loader, 10, header):
         samples = samples.to(device)
-
+        
+        
         outputs = model(samples)
         orig_target_sizes = torch.stack([t["orig_size"] for t in targets], dim=0)
         results = postprocessors['hoi'](outputs, orig_target_sizes)
