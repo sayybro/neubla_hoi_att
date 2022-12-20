@@ -113,3 +113,10 @@ def vaw_index_2_cat(index):
         annotations = json.load(f)
     index_2_cat = {v:k for k, v in annotations.items()}
     return index_2_cat[index]
+
+def color_index():
+    anno_file = 'attribute_index_color.json'
+    with open(anno_file, 'r') as f:
+        annotations = json.load(f)
+    color_index = [v for k, v in annotations.items()]
+    return color_index
