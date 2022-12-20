@@ -176,6 +176,10 @@ def get_args_parser():
     parser.add_argument('--group_name', default='Neubla')
     parser.add_argument('--run_name', default='train_num_1')
 
+    #mix up mode
+    parser.add_argument('--mixup', action='store_true',help='mixup')
+
+
     #for video vis
     parser.add_argument('--output_dir', default='output_video/example2.mp4',help='output path')
     parser.add_argument('--show_vid', action='store_true',help='check video inference')

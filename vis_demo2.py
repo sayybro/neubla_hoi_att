@@ -192,7 +192,7 @@ class Demo2():
         image = np.concatenate((img, image_ones), axis=1)
         vis_img = image.copy()
         
-        #for attribute inference
+        #for attribute inference - not done yet
         if inf_type == 'vaw':
             list_predictions = []
             for predict in output_i['predictions']:
@@ -238,7 +238,7 @@ class Demo2():
                         print(f'drawing attribute box : {text}, {cnt}')
                         cnt += 1 
         
-        #for hoi multi head inference
+        #for hoi multi head inference - not done yet
         elif ('vcoco' in inf_type) and ('hico' in inf_type):
             actions = {'hico':[],'vcoco':[]}
             for output in output_i:
@@ -309,8 +309,8 @@ class Demo2():
                             print(f'drawing vcoco action box : {text}, {cnt}')
                             cnt += 1 
 
-        
-        else: #for hoi single head inference 
+        #for hoi single head inference 
+        else: 
             list_actions = []
             for box, hoi in zip(output_i['box_predictions'], output_i['hoi_predictions']):
 
@@ -422,7 +422,7 @@ class Demo2():
                 line_box = [img.shape[1]+self.sidebar_size,((sum(cnt)+2*i)*ID_text_size[1]),vis_img.shape[1],((sum(cnt)+2*i)*ID_text_size[1])]
                 id_box = [img.shape[1]+self.sidebar_size, line_box[3]+self.font_size, img.shape[1]+self.sidebar_size+ID_text_size[0], line_box[3]+self.font_size+ID_text_size[1]]
                 vis_img = cv2.line(vis_img, (line_box[0],line_box[1]),(line_box[2],line_box[3]), self.RGB2BGR(CYAN), 3)
-                vis_img = cv2.putText(vis_img, id_text, (int(id_box[0]),int(id_box[3])),cv2.FONT_HERSHEY_SIMPLEX,1,self.RGB2BGR(SKYBLUE),2,cv2.LINE_AA,False)
+                vis_img = cv2.putText(vis_img, id_text, (int(id_box[0]),int(id_box[3])),cv2.FONT_HERSHEY_SIMPLEX,1,self.RGB2BGR(BLUE),2,cv2.LINE_AA,False)
 
                 verbs = np.where(action['verb_score'] > threshold)
                 s_bbox = action['subject_box']
@@ -437,15 +437,14 @@ class Demo2():
 
                 text_box = [s_bbox[0], s_bbox[1]-ID_text_size[1], s_bbox[0]+ID_text_size[0],s_bbox[1]]
                 vis_img = cv2.rectangle(vis_img, (int(text_box[0]),int(text_box[1])),(int(text_box[2]),int(text_box[3])), color_dict[int(o_class)], -1)
-                vis_img = cv2.putText(vis_img, id_text, (int(text_box[0]),int(text_box[3])),cv2.FONT_HERSHEY_SIMPLEX,1,self.RGB2BGR(SKYBLUE),2,cv2.LINE_AA,False)
+                vis_img = cv2.putText(vis_img, id_text, (int(text_box[0]),int(text_box[3])),cv2.FONT_HERSHEY_SIMPLEX,1,self.RGB2BGR(BLUE),2,cv2.LINE_AA,False)
                 for verb in verbs[0]:
                     verb_cnt[i] += 1
-                    #import pdb; pdb.set_trace()
+
                     if 'vcoco' in inf_type:
                         text = self.index_2_cat(verb,'vcoco')
                     elif 'hico' in inf_type:
                         text = self.index_2_cat(verb,'hico')
-                    #text_size, BaseLine=cv2.getTextSize(text,cv2.FONT_HERSHEY_SIMPLEX,1,2)
                     
                     text_box2 = [img.shape[1]+self.sidebar_size, int(id_box[3])+(verb_cnt[i]-1)*(ID_text_size[1]), img.shape[1]+self.sidebar_size+ID_text_size[0], int(id_box[3])+(verb_cnt[i])*(ID_text_size[1])]
                     vis_img = cv2.putText(vis_img, text, (int(text_box2[0]),int(text_box2[3])),cv2.FONT_HERSHEY_SIMPLEX,1,self.RGB2BGR(GREEN),2,cv2.LINE_AA,False)
@@ -455,7 +454,6 @@ class Demo2():
         list_predictions = []
         for predict in output_i['att']['predictions']:
 
-            #prediction threshold
             if predict['max_score'] < threshold:
                 continue
             object_id = predict['object_id']
@@ -473,15 +471,13 @@ class Demo2():
                 if i not in attr_cnt.keys():
                     attr_cnt[i] = 0
 
-                #visualize sidebar
                 id_text = f'Attribute ID:{i}'
                 ID_text_size, BaseLine=cv2.getTextSize(id_text,cv2.FONT_HERSHEY_SIMPLEX,1,2)
                 cnt = [v for k,v in attr_cnt.items()]
-                #import pdb; pdb.set_trace()
                 line_box = [img.shape[1],((sum(cnt)+2*i)*ID_text_size[1]),vis_img.shape[1]-self.sidebar_size,((sum(cnt)+2*i)*ID_text_size[1])]
                 id_box = [img.shape[1], line_box[3]+self.font_size, img.shape[1]-self.sidebar_size+ID_text_size[0], line_box[3]+self.font_size+ID_text_size[1]]
                 vis_img = cv2.line(vis_img, (line_box[0],line_box[1]),(line_box[2],line_box[3]), self.RGB2BGR(YELLOW), 3)
-                vis_img = cv2.putText(vis_img, id_text, (int(id_box[0]),int(id_box[3])),cv2.FONT_HERSHEY_SIMPLEX,1,self.RGB2BGR(ORANGE),2,cv2.LINE_AA,False)
+                vis_img = cv2.putText(vis_img, id_text, (int(id_box[0]),int(id_box[3])),cv2.FONT_HERSHEY_SIMPLEX,1,self.RGB2BGR(RED),2,cv2.LINE_AA,False)
                 
                 
                 attributes = np.where(prediction['attr_score'] > threshold)
@@ -490,22 +486,14 @@ class Demo2():
                 vis_img = cv2.rectangle(vis_img, (int(o_bbox[0]),int(o_bbox[1])), (int(o_bbox[2]),int(o_bbox[3])), color_dict[int(o_class)], 3)
                 print(f'drawing att object box')
                 
-                #import pdb; pdb.set_trace()
-  #              text_size, BaseLine=cv2.getTextSize(self.index_2_cat(attributes[0][0],args.inf_type),cv2.FONT_HERSHEY_SIMPLEX,1,2)
-
-                #text height for multiple attributes
                 text_box = [o_bbox[0], o_bbox[1]-ID_text_size[1], o_bbox[0]+ID_text_size[0],o_bbox[1]]
                 vis_img = cv2.rectangle(vis_img, (int(text_box[0]),int(text_box[1])),(int(text_box[2]),int(text_box[3])), color_dict[int(o_class)], -1)
-                vis_img = cv2.putText(vis_img, id_text, (int(text_box[0]),int(text_box[3])),cv2.FONT_HERSHEY_SIMPLEX,1,self.RGB2BGR(ORANGE),2,cv2.LINE_AA,False)
+                vis_img = cv2.putText(vis_img, id_text, (int(text_box[0]),int(text_box[3])),cv2.FONT_HERSHEY_SIMPLEX,1,self.RGB2BGR(RED),2,cv2.LINE_AA,False)
                 for attr in attributes[0]:
                     attr_cnt[i] += 1
                     text = self.index_2_cat(attr,'vaw')
                     text_size, BaseLine=cv2.getTextSize(text,cv2.FONT_HERSHEY_SIMPLEX,1,2)
-                    # if o_bbox[1]-cnt*text_size_y < 0 or o_bbox[0] < 0:
-                    #     break
-                    #text_box = [o_bbox[0], o_bbox[1]-cnt*text_size_y, o_bbox[0]+text_size[0],o_bbox[1]-(cnt-1)*text_size_y]
 
-                    #draw text
                     text_box2 = [img.shape[1], int(id_box[3])+(attr_cnt[i]-1)*(ID_text_size[1]), img.shape[1]-self.sidebar_size+ID_text_size[0], int(id_box[3])+(attr_cnt[i])*(ID_text_size[1])]
                     vis_img = cv2.putText(vis_img, text, (int(text_box2[0]),int(text_box2[3])),cv2.FONT_HERSHEY_SIMPLEX,1,self.RGB2BGR(GREEN),2,cv2.LINE_AA,False)
                     print(f'drawing attribute box : {text}, {attr_cnt[i]}')
@@ -516,9 +504,7 @@ class Demo2():
     def save_video(self, args):
         frame_width = int(self.cap.get(cv2.CAP_PROP_FRAME_WIDTH))	
         frame_height = int(self.cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
-        #import pdb; pdb.set_trace()
         if args.all:
-            #import pdb; pdb.set_trace()
             frame_size = (frame_width+2*self.sidebar_size, frame_height)
         else:
             frame_size = (frame_width+self.sidebar_size, frame_height)
@@ -529,10 +515,9 @@ class Demo2():
         model.to(device)
         color_dict = self.make_color_dict(self.num_obj_classes)
         while(True):
-
             retval, frame = self.cap.read() 
             print(f'frame_num : {self.frame_num}')
-
+            
             if not retval:
                 break
 
