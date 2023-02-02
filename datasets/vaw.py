@@ -15,7 +15,6 @@ import numpy as np
 import torch
 import torch.utils.data
 import torchvision
-
 # from hotr.data.datasets import builtin_meta
 import datasets.transforms as T
 from util.box_ops import box_cxcywh_to_xyxy
@@ -226,9 +225,9 @@ def build(image_set, args):
     root = Path('data/vaw')
     assert root.exists(), f'provided HOI path {root} does not exist'
     PATHS = {
-        'train': (root / 'images' , root / 'annotations' / 'vaw_coco_train.json'),
-        'val': (root / 'images' , root / 'annotations' / 'vaw_coco_test.json'),
-        'test': (root / 'images' , root / 'annotations' / 'vaw_coco_test.json')
+        'train': (root / 'images' , root / 'annotations' / 'vaw_orig_train.json'),
+        'val': (root / 'images' , root / 'annotations' / 'vaw_orig_test.json'),
+        'test': (root / 'images' , root / 'annotations' / 'vaw_orig_test.json')
     }
     # CORRECT_MAT_PATH = root / 'annotations' / 'corre_hico.npy'
     attribute_freq = root / 'annotations' / 'vaw_coco_train_cat_info.json'

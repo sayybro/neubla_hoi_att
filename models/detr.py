@@ -477,8 +477,6 @@ def build(args):
                 num_classes.update({'vcoco':args.num_vcoco_verb_classes})
         if 'vaw' in args.mtl_data:
             losses.extend(['att_labels'])
-            if args.update_obj_att:
-                losses.extend(['att_obj_labels','att_obj_cardinality','obj_att_boxes'])
             if 'vaw' in args.mtl_data:
                 num_classes.update({'vaw':args.num_att_classes})
         #import pdb; pdb.set_trace()

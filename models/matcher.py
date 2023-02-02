@@ -112,15 +112,15 @@ class HungarianMatcherHOI(nn.Module):
         #outputs['pred_sub_boxes'].shape : torch.Size([8, 100, 4])
         cost_class = self.cost_verb_class if dtype=='hoi' else self.cost_att_class
         bs, num_queries = outputs['pred_obj_logits'].shape[:2]
-
         out_obj_prob = outputs['pred_obj_logits'].flatten(0, 1).softmax(-1)
+        
+        #vaw : outputs['pred_logits'].shape : torch.Size([620])
+        #hoi : outputs['pred_logits'].shape : torch.Size([8, 100, 117])
         out_prob = outputs['pred_logits'].flatten(0, 1).sigmoid()
         if dtype=='hoi':
             out_sub_bbox = outputs['pred_sub_boxes'].flatten(0, 1)
         
-        #import pdb; pdb.set_trace()
         out_obj_bbox = outputs['pred_obj_boxes'].flatten(0, 1)
-        # print(dtype)
         if dtype=='hoi':
             tgt_obj_labels = torch.cat([v['obj_labels'] for v in targets])
             tgt_labels = torch.cat([v['verb_labels'] for v in targets])
@@ -165,12 +165,6 @@ class HungarianMatcherHOI(nn.Module):
                 cost_giou = torch.stack((cost_sub_giou, cost_obj_giou)).max(dim=0)[0]
         else:
             cost_giou = cost_obj_giou
-        # import pdb;pdb.set_trace()
-        # print(cost_obj_class.shape,cost_bbox.shape,cost_giou.shape,cost_class.shape)
-        # if cost_class.shape[-1]!=cost_giou.shape[-1]:
-        #     import pdb;pdb.set_trace()
-
-        #cost_class * cost_class -> 맞나.?
 
         if dtype=='hoi':
             C = self.cost_obj_class * cost_obj_class + self.cost_verb_class * cost_class + \

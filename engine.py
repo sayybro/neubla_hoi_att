@@ -25,7 +25,7 @@ from datasets.panoptic_eval import PanopticEvaluator
 from datasets.hico_eval import HICOEvaluator
 from datasets.vcoco_eval import VCOCOEvaluator, VCOCOEvaluator_orig
 from datasets.vaw_eval import VAWEvaluator
-from mixup.mixup import mixup_data, mixup_criterion
+#from mixup.mixup import mixup_data, mixup_criterion
 
 
 
@@ -35,60 +35,34 @@ def train_one_epoch(model: torch.nn.Module, criterion: torch.nn.Module,
     model.train()
     criterion.train()
 
-    
-    #metric_logger : MetricLogger(object) class의 instance 
-    metric_logger = utils.MetricLogger(delimiter="") #default 값 self.delimiter = '\t'
+
+    metric_logger = utils.MetricLogger(delimiter="") 
     metric_logger.add_meter('lr', utils.SmoothedValue(window_size=1, fmt='{value:.6f}'))
     
 
 
     if hasattr(criterion, 'loss_labels'):
         metric_logger.add_meter('class_error', utils.SmoothedValue(window_size=1, fmt='{value:.2f}'))
-    # else:
-    #     metric_logger.add_meter('obj_class_error', utils.SmoothedValue(window_size=1, fmt='{value:.2f}'))
+
     header = 'Epoch: [{}]'.format(epoch)
-    
-    # print_freq = int(len(data_loader)/10)
     print_freq = 10
-    # import pdb;pdb.set_trace()    
-    # max([len(d.dataset)//(args.batch_size*utils.get_world_size()) for d in data_loader])
-    
-    '''
-    def log_every(self, iterable, print_freq, header=None):
-    '''
     for samples,targets in metric_logger.log_every(data_loader, print_freq, header):
-        # print([t['dataset'] for t in targets])
+
         assert len(set([t['dataset'] for t in targets]))==1
         samples = samples.to(device)
         targets = [{k: v.to(device)  if type(v)!=str else v for k, v in t.items()} for t in targets]
         dtype=targets[0]['type']
         dataset=targets[0]['dataset']
-
-        if args.mixup:
-            target_verb = [target['verb_labels'] for target in targets]
-            mixed_x_a, mixed_x_b, y_a, y_b, lam = mixup_data(samples.tensors, target_verb, 0.2) 
-            x_a, x_b = [], []
-            for samples_a, samples_b in zip(mixed_x_a,mixed_x_b):
-                x_a.append(torch.stack(samples_a))
-                x_b.append(torch.stack(samples_b))     
-            y_a_list, y_b_list = [], []
-            for labels_a, labels_b in zip(y_a,y_b):
-                #import pdb; pdb.set_trace()
-                y_a_list.append(labels_a)
-                y_b_list.append(labels_b)     
-            #import pdb; pdb.set_trace()
-            m_x_a = torch.cat(x_a,dim=0).to(device)
-            m_x_b = torch.cat(x_b,dim=0).to(device)
-            m_y_a = torch.cat(y_a_list,dim=0).to(device)
-            m_y_b = torch.cat(y_b_list,dim=0).to(device)
-            import random
-            indices = random.sample(range(len(m_x_a)),3)
-            outputs_a = model(m_x_a[indices],dtype,dataset)
-            outputs_b = model(m_x_b[indices],dtype,dataset)
-            import pdb; pdb.set_trace()
-        #samples [<class 'util.misc.NestedTensor'>] : torch.Size([8, 3, 979, 899])
-        outputs = model(samples,dtype,dataset)
+        # if dtype == 'att':
+        #     attribute_outputs, outputs = model(samples,targets,dtype,dataset)
+        # else:
+        outputs = model(samples,targets,dtype,dataset)
+        
+        # if dtype == 'att':
+        #     loss_dict = criterion(outputs, targets, attribute_outputs)
+        # else:
         loss_dict = criterion(outputs, targets)
+        #loss_dict = criterion(outputs, targets)
         weight_dict = criterion.weight_dict
         losses = sum(loss_dict[k] * weight_dict[k] for k in loss_dict.keys() if k in weight_dict)
 
@@ -101,7 +75,6 @@ def train_one_epoch(model: torch.nn.Module, criterion: torch.nn.Module,
         losses_reduced_scaled = sum(loss_dict_reduced_scaled.values())
 
         loss_value = losses_reduced_scaled.item()
-        # print(len(loss_dict_reduced_scaled))
         if not math.isfinite(loss_value):
             print("Loss is {}, stopping training".format(loss_value))
             print(loss_dict_reduced)

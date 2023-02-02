@@ -128,6 +128,8 @@ def get_args_parser():
                         help="Number of decoding layers in HOI transformer")
     parser.add_argument('--att_dim_feedforward', default=2048, type=int,
                         help="Number of decoding layers in HOI transformer")
+    parser.add_argument('--num_att_classes', default=620, type=int,
+                        help="Number of attribute classes")
     # parser.add_argument('--hoi_mode', type=str, default=None, help='[inst | pair | all]')
     parser.add_argument('--num_att_queries', default=100, type=int,
                         help="Number of Queries for Interaction Decoder")
@@ -203,7 +205,6 @@ def main(args):
     if args.frozen_weights is not None:
         assert args.masks, "Frozen training is meant for segmentation only"
     print(args)
-
     device = torch.device(args.device)
 
     # fix the seed for reproducibility
