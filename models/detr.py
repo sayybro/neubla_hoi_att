@@ -316,6 +316,7 @@ def build(args):
 
     device = torch.device(args.device)
     backbone = build_backbone(args)
+    transformer = build_transformer(args)
 
     if args.mtl:
         if args.show_vid:
