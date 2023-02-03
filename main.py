@@ -418,59 +418,61 @@ def main(args):
                     'args': args,
                 }, checkpoint_path)
         if (epoch+1)%1==0:
-            if args.hoi or args.att_det or args.mtl:
-                #for multi task learning
-                if args.mtl:
-                    for dlv in data_loader_val:
-                        test_stats,dataset_name = evaluate_hoi_att(args.dataset_file, model, postprocessors, dlv, args.subject_category_id, device, args)
-                        if 'v-coco' in dataset_name:
-                            log_stats = {**{f'train_{k}': v for k, v in train_stats.items()},
-                            **{f'test_{k}': v for k, v in test_stats.items()},
-                            'epoch': epoch,
-                            'n_parameters': n_parameters}
-                            if args.output_dir and utils.is_main_process():
-                                with (output_dir / "log.txt").open("a") as f:
-                                    f.write(json.dumps(log_stats) + "\n")
-                            if utils.get_rank() == 0 and args.wandb:
-                        
-                                wandb.log({
-                                    'mAP_all': test_stats['mAP_all'],
-                                    'mAP_thesis':test_stats['mAP_thesis']
-                                })
-                            performance=test_stats['mAP_thesis']
-                        elif 'hico' in dataset_name:
-                            log_stats = {**{f'train_{k}': v for k, v in train_stats.items()},
-                            **{f'test_{k}': v for k, v in test_stats.items()},
-                            'epoch': epoch,
-                            'n_parameters': n_parameters}
-                            if args.output_dir and utils.is_main_process():
-                                with (output_dir / "log.txt").open("a") as f:
-                                    f.write(json.dumps(log_stats) + "\n")
-                            if utils.get_rank() == 0 and args.wandb:
-                                wandb.log({
-                                    'mAP': test_stats['mAP'],
-                                    'mAP rare': test_stats['mAP rare'],
-                                    'mAP non-rare':test_stats['mAP non-rare'],
-                                    'mean max recall':test_stats['mean max recall']
-                                })
-                            performance=test_stats['mAP']
-                        elif 'vaw' in dataset_name:
-                            log_stats = {**{f'train_{k}': v for k, v in train_stats.items()},
-                            **{f'test_{k}': v for k, v in test_stats.items()},
-                            'epoch': epoch,
-                            'n_parameters': n_parameters}
-                            if args.output_dir and utils.is_main_process():
-                                with (output_dir / "log.txt").open("a") as f:
-                                    f.write(json.dumps(log_stats) + "\n")
-                            if utils.get_rank() == 0 and args.wandb:
-                                wandb.log({
-                                    'mAP': test_stats['mAP'],
-                                    'mAP rare': test_stats['mAP rare'],
-                                    'mAP non-rare':test_stats['mAP non-rare'],
-                                    'mean max recall':test_stats['mean max recall']
-                                })
-                            performance=test_stats['mAP']
-                        coco_evaluator = None
+            #eval flag to skip evaluation 
+            if args.eval: 
+                if args.hoi or args.att_det or args.mtl:
+                    #for multi task learning
+                    if args.mtl:
+                        for dlv in data_loader_val:
+                            test_stats,dataset_name = evaluate_hoi_att(args.dataset_file, model, postprocessors, dlv, args.subject_category_id, device, args)
+                            if 'v-coco' in dataset_name:
+                                log_stats = {**{f'train_{k}': v for k, v in train_stats.items()},
+                                **{f'test_{k}': v for k, v in test_stats.items()},
+                                'epoch': epoch,
+                                'n_parameters': n_parameters}
+                                if args.output_dir and utils.is_main_process():
+                                    with (output_dir / "log.txt").open("a") as f:
+                                        f.write(json.dumps(log_stats) + "\n")
+                                if utils.get_rank() == 0 and args.wandb:
+                            
+                                    wandb.log({
+                                        'mAP_all': test_stats['mAP_all'],
+                                        'mAP_thesis':test_stats['mAP_thesis']
+                                    })
+                                performance=test_stats['mAP_thesis']
+                            elif 'hico' in dataset_name:
+                                log_stats = {**{f'train_{k}': v for k, v in train_stats.items()},
+                                **{f'test_{k}': v for k, v in test_stats.items()},
+                                'epoch': epoch,
+                                'n_parameters': n_parameters}
+                                if args.output_dir and utils.is_main_process():
+                                    with (output_dir / "log.txt").open("a") as f:
+                                        f.write(json.dumps(log_stats) + "\n")
+                                if utils.get_rank() == 0 and args.wandb:
+                                    wandb.log({
+                                        'mAP': test_stats['mAP'],
+                                        'mAP rare': test_stats['mAP rare'],
+                                        'mAP non-rare':test_stats['mAP non-rare'],
+                                        'mean max recall':test_stats['mean max recall']
+                                    })
+                                performance=test_stats['mAP']
+                            elif 'vaw' in dataset_name:
+                                log_stats = {**{f'train_{k}': v for k, v in train_stats.items()},
+                                **{f'test_{k}': v for k, v in test_stats.items()},
+                                'epoch': epoch,
+                                'n_parameters': n_parameters}
+                                if args.output_dir and utils.is_main_process():
+                                    with (output_dir / "log.txt").open("a") as f:
+                                        f.write(json.dumps(log_stats) + "\n")
+                                if utils.get_rank() == 0 and args.wandb:
+                                    wandb.log({
+                                        'mAP': test_stats['mAP'],
+                                        'mAP rare': test_stats['mAP rare'],
+                                        'mAP non-rare':test_stats['mAP non-rare'],
+                                        'mean max recall':test_stats['mean max recall']
+                                    })
+                                performance=test_stats['mAP']
+                            coco_evaluator = None
 
             
                 #single task learning

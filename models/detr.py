@@ -21,7 +21,7 @@ from .backbone import build_backbone
 from .matcher import build_matcher
 from .segmentation import (DETRsegm, PostProcessPanoptic, PostProcessSegm,
                            dice_loss, sigmoid_focal_loss)
-from .hoi import (DETRHOI, DETRHOI_orig,SetCriterionHOI, SetCriterionHOI_orig,PostProcessHOI_ATT, PostProcessHOI_orig)
+from .hoi import (DETRHOI,SetCriterionHOI,PostProcessHOI_ATT)
 from .transformer import build_transformer, build_transformer_div
 
 
@@ -316,7 +316,8 @@ def build(args):
 
     device = torch.device(args.device)
     backbone = build_backbone(args)
-
+    transformer = build_transformer(args)
+    
     if args.mtl:
         if args.show_vid:
             num_classes,cost_class,num_obj_classes={},{},{}

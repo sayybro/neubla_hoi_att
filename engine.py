@@ -225,7 +225,7 @@ def evaluate_hoi_att(dataset_file, model, postprocessors, data_loader, subject_c
         dataset=targets[0]['dataset'] 
         samples = samples.to(device)
         
-        outputs = model(samples,dtype,dataset)
+        outputs = model(samples,targets,dtype,dataset)
 
         orig_target_sizes = torch.stack([t["orig_size"] for t in targets], dim=0)
         results = postprocessors(outputs, orig_target_sizes)

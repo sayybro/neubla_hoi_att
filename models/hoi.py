@@ -513,45 +513,45 @@ class PostProcessHOI_ATT(nn.Module):
 
     
 
-class PostProcessHOI_orig(nn.Module):
-    def __init__(self, subject_category_id):
-        super().__init__()
-        self.subject_category_id = subject_category_id
+# class PostProcessHOI_orig(nn.Module):
+#     def __init__(self, subject_category_id):
+#         super().__init__()
+#         self.subject_category_id = subject_category_id
 
-    @torch.no_grad()
-    def forward(self, outputs, target_sizes):
-        out_obj_logits, out_verb_logits, out_sub_boxes, out_obj_boxes = outputs['pred_obj_logits'], \
-                                                                        outputs['pred_verb_logits'], \
-                                                                        outputs['pred_sub_boxes'], \
-                                                                        outputs['pred_obj_boxes']
+#     @torch.no_grad()
+#     def forward(self, outputs, target_sizes):
+#         out_obj_logits, out_verb_logits, out_sub_boxes, out_obj_boxes = outputs['pred_obj_logits'], \
+#                                                                         outputs['pred_verb_logits'], \
+#                                                                         outputs['pred_sub_boxes'], \
+#                                                                         outputs['pred_obj_boxes']
 
-        assert len(out_obj_logits) == len(target_sizes)
-        assert target_sizes.shape[1] == 2
+#         assert len(out_obj_logits) == len(target_sizes)
+#         assert target_sizes.shape[1] == 2
 
-        obj_prob = F.softmax(out_obj_logits, -1)
-        obj_scores, obj_labels = obj_prob[..., :-1].max(-1)
+#         obj_prob = F.softmax(out_obj_logits, -1)
+#         obj_scores, obj_labels = obj_prob[..., :-1].max(-1)
 
-        verb_scores = out_verb_logits.sigmoid()
+#         verb_scores = out_verb_logits.sigmoid()
 
-        img_h, img_w = target_sizes.unbind(1)
-        scale_fct = torch.stack([img_w, img_h, img_w, img_h], dim=1).to(verb_scores.device)
-        sub_boxes = box_cxcywh_to_xyxy(out_sub_boxes)
-        sub_boxes = sub_boxes * scale_fct[:, None, :]
-        obj_boxes = box_cxcywh_to_xyxy(out_obj_boxes)
-        obj_boxes = obj_boxes * scale_fct[:, None, :]
+#         img_h, img_w = target_sizes.unbind(1)
+#         scale_fct = torch.stack([img_w, img_h, img_w, img_h], dim=1).to(verb_scores.device)
+#         sub_boxes = box_cxcywh_to_xyxy(out_sub_boxes)
+#         sub_boxes = sub_boxes * scale_fct[:, None, :]
+#         obj_boxes = box_cxcywh_to_xyxy(out_obj_boxes)
+#         obj_boxes = obj_boxes * scale_fct[:, None, :]
 
-        results = []
-        for os, ol, vs, sb, ob in zip(obj_scores, obj_labels, verb_scores, sub_boxes, obj_boxes):
-            sl = torch.full_like(ol, self.subject_category_id)
-            l = torch.cat((sl, ol))
-            b = torch.cat((sb, ob))
-            results.append({'labels': l.to('cpu'), 'boxes': b.to('cpu')})
+#         results = []
+#         for os, ol, vs, sb, ob in zip(obj_scores, obj_labels, verb_scores, sub_boxes, obj_boxes):
+#             sl = torch.full_like(ol, self.subject_category_id)
+#             l = torch.cat((sl, ol))
+#             b = torch.cat((sb, ob))
+#             results.append({'labels': l.to('cpu'), 'boxes': b.to('cpu')})
 
-            vs = vs * os.unsqueeze(1)
+#             vs = vs * os.unsqueeze(1)
 
-            ids = torch.arange(b.shape[0])
+#             ids = torch.arange(b.shape[0])
 
-            results[-1].update({'verb_scores': vs.to('cpu'), 'sub_ids': ids[:ids.shape[0] // 2],
-                                'obj_ids': ids[ids.shape[0] // 2:]})
+#             results[-1].update({'verb_scores': vs.to('cpu'), 'sub_ids': ids[:ids.shape[0] // 2],
+#                                 'obj_ids': ids[ids.shape[0] // 2:]})
 
-        return results
+#         return results
