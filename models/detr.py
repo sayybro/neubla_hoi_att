@@ -22,8 +22,7 @@ from .matcher import build_matcher
 from .segmentation import (DETRsegm, PostProcessPanoptic, PostProcessSegm,
                            dice_loss, sigmoid_focal_loss)
 from .hoi import (DETRHOI, DETRHOI_orig,SetCriterionHOI, SetCriterionHOI_orig,PostProcessHOI_ATT, PostProcessHOI_orig)
-from .transformer import build_transformer, build_transformer_div
-
+from .transformer import build_transformer
 
 
 class DETR(nn.Module):
