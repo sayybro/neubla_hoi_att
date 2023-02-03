@@ -128,6 +128,8 @@ def get_args_parser():
                         help="Number of decoding layers in HOI transformer")
     parser.add_argument('--att_dim_feedforward', default=2048, type=int,
                         help="Number of decoding layers in HOI transformer")
+    parser.add_argument('--num_att_classes', default=620, type=int,
+                        help="Number of attribute classes")
     # parser.add_argument('--hoi_mode', type=str, default=None, help='[inst | pair | all]')
     parser.add_argument('--num_att_queries', default=100, type=int,
                         help="Number of Queries for Interaction Decoder")
@@ -176,10 +178,6 @@ def get_args_parser():
     parser.add_argument('--group_name', default='Neubla')
     parser.add_argument('--run_name', default='train_num_1')
 
-    #mix up mode
-    parser.add_argument('--mixup', action='store_true',help='mixup')
-
-
     #for video vis
     parser.add_argument('--output_dir', default='output_video/example2.mp4',help='output path')
     parser.add_argument('--show_vid', action='store_true',help='check video inference')
@@ -191,8 +189,6 @@ def get_args_parser():
     parser.add_argument('--fps', default=30,type=int,help='fps')
     parser.add_argument('--all', action='store_true',help='check hoi+attribute inference')
     parser.add_argument('--color', action='store_true',help='only color inference for vaw')
-    
-    
     return parser
 
 
@@ -203,7 +199,6 @@ def main(args):
     if args.frozen_weights is not None:
         assert args.masks, "Frozen training is meant for segmentation only"
     print(args)
-
     device = torch.device(args.device)
 
     # fix the seed for reproducibility
@@ -217,16 +212,11 @@ def main(args):
         from pytorch_lightning.trainer.supporters import CombinedLoader
         dataset_train = build_dataset(image_set='train', args=args)
         dataset_val = build_dataset(image_set='val', args=args)
-        #import pdb; pdb.set_trace()
-        if 'vaw' in args.mtl_data:
-            
+        if 'vaw' in args.mtl_data:            
             args.num_att_classes = dataset_train[-1].num_attributes() 
-
         if args.distributed:
-
             sampler_train = [torch.utils.data.DistributedSampler(d) for d in dataset_train]
             sampler_val = [torch.utils.data.DistributedSampler(dv,shuffle=False) for dv in dataset_val]
-
         else:
             sampler_train = [torch.utils.data.RandomSampler(d)for d in dataset_train]
             sampler_val = [torch.utils.data.SequentialSampler(dv) for dv in dataset_val]
@@ -240,8 +230,6 @@ def main(args):
         
         data_loader_val = [DataLoader(dv, args.batch_size, sampler=sv,
                                     drop_last=False, collate_fn=utils.collate_fn, num_workers=args.num_workers) for dv,sv in zip(dataset_val,sampler_val)]
-       
-        #import pdb; pdb.set_trace()
     else:
         dataset_train = build_dataset(image_set='train', args=args)
         dataset_val = build_dataset(image_set='val', args=args)
@@ -263,7 +251,7 @@ def main(args):
                                     collate_fn=utils.collate_fn, num_workers=args.num_workers)
         data_loader_val = DataLoader(dataset_val, args.batch_size, sampler=sampler_val,
                                     drop_last=False, collate_fn=utils.collate_fn, num_workers=args.num_workers)
-    #import pdb;pdb.set_trace()
+
     
     model, criterion, postprocessors = build_model(args)
     model.to(device)
@@ -288,7 +276,6 @@ def main(args):
 
     if not args.hoi and not args.att_det:
         if args.dataset_file == "coco_panoptic":
-            # We also evaluate AP during panoptic training, on original coco DS
             coco_val = datasets.coco.build("val", args)
             base_ds = get_coco_api_from_dataset(coco_val)
         else:
@@ -314,7 +301,7 @@ def main(args):
     elif args.pretrained:
         checkpoint = torch.load(args.pretrained, map_location='cpu')
         model_without_ddp.load_state_dict(checkpoint['model'],strict=False)
-        #import pdb; pdb.set_trace()
+
     if args.eval:
         if args.hoi or args.att_det or args.mtl:
             if args.mtl:
@@ -360,7 +347,6 @@ def main(args):
                         performance=test_stats['mAP']
                     coco_evaluator = None
             else:
-                #test_stats,dataset_name = evaluate_hoi_att(args.dataset_file, model, postprocessors, data_loader_val, args.subject_category_id, device, args)
                 test_stats = evaluate_hoi(args.dataset_file, model, postprocessors, data_loader_val, args.subject_category_id, device)
                 if 'v-coco' in dataset_name:
                     if utils.get_rank() == 0 and args.wandb:
