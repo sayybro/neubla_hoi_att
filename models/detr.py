@@ -313,20 +313,11 @@ def build(args):
     num_classes = 20 if args.dataset_file != 'coco' else 91
     if args.dataset_file == "coco_panoptic":
         num_classes = 250
-    
-    device = torch.device(args.device)
 
-    
+    device = torch.device(args.device)
     backbone = build_backbone(args)
-    
-    if args.mtl_divide:
-        #import pdb; pdb.set_trace()
-        transformer = build_transformer_div(args)
-    else:
-        transformer = build_transformer(args)
 
     if args.mtl:
-
         if args.show_vid:
             num_classes,cost_class,num_obj_classes={},{},{}
             if 'hico' in args.inf_type or 'vcoco' in args.inf_type:
@@ -335,22 +326,18 @@ def build(args):
                 if 'vcoco' in args.inf_type:
                     num_classes.update({'vcoco':args.num_vcoco_verb_classes})
                 cost_class.update({'hoi':args.set_cost_verb_class})
-                #import pdb; pdb.set_trace()
-                # num_obj_classes.update({'hoi':args.num_obj_classes})
             if 'vaw' in args.inf_type:
                 args.num_att_classes = 620
                 args.set_cost_att = 1
-                num_classes.update({'att':args.num_att_classes}) #num_class : {'hico': 117, 'vcoco': 29, 'att': 620}
-                cost_class.update({'att':args.set_cost_att}) #{'hoi': 1, 'att': 1}
-                # num_obj_classes.update({'att':args.num_obj_att_classes})
+                num_classes.update({'att':args.num_att_classes}) 
+                cost_class.update({'att':args.set_cost_att}) 
             args.cost_class = cost_class
-            #import pdb; pdb.set_trace()
             model = DETRHOI(
                 backbone,
                 transformer,
-                num_obj_classes=args.num_obj_classes, #81
-                num_classes= num_classes, #{'hico': 117, 'vcoco': 29, 'att': 620}
-                num_queries=args.num_queries, #100
+                num_obj_classes=args.num_obj_classes, 
+                num_classes= num_classes,
+                num_queries=args.num_queries, 
                 aux_loss=args.aux_loss,
                 args=args,
             )
@@ -362,20 +349,16 @@ def build(args):
                 if 'vcoco' in args.mtl_data:
                     num_classes.update({'vcoco':args.num_vcoco_verb_classes})
                 cost_class.update({'hoi':args.set_cost_verb_class})
-                #import pdb; pdb.set_trace()
-                # num_obj_classes.update({'hoi':args.num_obj_classes})
             if 'vaw' in args.mtl_data:
-                num_classes.update({'att':args.num_att_classes}) #num_class : {'hico': 117, 'vcoco': 29, 'att': 620}
-                cost_class.update({'att':args.set_cost_att}) #{'hoi': 1, 'att': 1}
-                # num_obj_classes.update({'att':args.num_obj_att_classes})
+                num_classes.update({'att':args.num_att_classes}) 
+                cost_class.update({'att':args.set_cost_att}) 
             args.cost_class = cost_class
-            #import pdb; pdb.set_trace()
             model = DETRHOI(
                 backbone,
                 transformer,
-                num_obj_classes=args.num_obj_classes, #81
-                num_classes= num_classes, #{'hico': 117, 'vcoco': 29, 'att': 620}
-                num_queries=args.num_queries, #100
+                num_obj_classes=args.num_obj_classes, 
+                num_classes= num_classes, 
+                num_queries=args.num_queries, 
                 aux_loss=args.aux_loss,
                 args=args,
             )
@@ -388,21 +371,12 @@ def build(args):
             if args.hoi:
                 num_classes.update({'hoi':args.num_verb_classes})
                 cost_class.update({'hoi':args.set_cost_verb_class})
-                # num_obj_classes.update({'hoi':args.num_obj_classes})
+
             if args.att_det:
                 num_classes.update({'att':args.num_att_classes})
                 cost_class.update({'att':args.set_cost_att})
-                # num_obj_classes.update({'att':args.num_obj_att_classes})
+
             args.cost_class = cost_class
-        #     model = DETRHOI(
-        #     backbone,
-        #     transformer,
-        #     num_obj_classes=args.num_obj_classes, #81
-        #     num_verb_classes= num_classes, #{'hico': 117, 'vcoco': 29, 'att': 620}
-        #     num_queries=args.num_queries, #100
-        #     aux_loss=args.aux_loss,
-        #     args=args,
-        # )
             model = DETRHOI_orig(
             backbone,
             transformer,
@@ -468,9 +442,6 @@ def build(args):
         num_classes = {}
         if 'hico' in args.mtl_data or 'vcoco' in args.mtl_data:
             losses.extend(['obj_labels', 'verb_labels', 'sub_obj_boxes', 'obj_cardinality'])
-        # criterion = SetCriterionHOI(num_obj_classes, args.num_queries, args.num_verb_classes, matcher=matcher,
-        #                             weight_dict=weight_dict, eos_coef=args.eos_coef, losses=losses,
-        #                             loss_type=args.loss_type, args=args,)
             if 'hico' in args.mtl_data:
                 num_classes.update({'hico':args.num_hico_verb_classes})
             if 'vcoco' in args.mtl_data:
@@ -479,7 +450,6 @@ def build(args):
             losses.extend(['att_labels'])
             if 'vaw' in args.mtl_data:
                 num_classes.update({'vaw':args.num_att_classes})
-        #import pdb; pdb.set_trace()
         criterion = SetCriterionHOI(args.num_obj_classes, args.num_queries, num_classes, matcher=matcher,
                             weight_dict=weight_dict, eos_coef=args.eos_coef, losses=losses,
                             loss_type=args.loss_type,args=args)
@@ -492,8 +462,6 @@ def build(args):
                     num_classes.update({'hico':args.num_hico_verb_classes})
                 if args.dataset_file == 'vcoco':
                     num_classes.update({'vcoco':args.num_vcoco_verb_classes})
-                losses = ['obj_labels', 'verb_labels', 'sub_obj_boxes', 'obj_cardinality']
-                #import pdb; pdb.set_trace()
                 criterion = SetCriterionHOI_orig(args.num_obj_classes, args.num_queries, num_classes, matcher=matcher,
                                             weight_dict=weight_dict, eos_coef=args.eos_coef, losses=losses,
                                             verb_loss_type=args.loss_type)
@@ -515,7 +483,7 @@ def build(args):
     criterion.to(device)
     if args.hoi or args.att_det or args.mtl:
         postprocessors = PostProcessHOI_ATT(args.subject_category_id)
-        #postprocessors = {'hoi':PostProcessHOI_orig(args.subject_category_id)}
+
     else:
         postprocessors = {'bbox': PostProcess()}
         if args.masks:
@@ -523,5 +491,5 @@ def build(args):
             if args.dataset_file == "coco_panoptic":
                 is_thing_map = {i: i <= 90 for i in range(201)}
                 postprocessors["panoptic"] = PostProcessPanoptic(is_thing_map, threshold=0.85)
-    #import pdb; pdb.set_trace()
+
     return model, criterion, postprocessors

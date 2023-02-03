@@ -105,17 +105,9 @@ class HungarianMatcherHOI(nn.Module):
 
     @torch.no_grad()
     def forward(self, outputs, targets, dtype):
-        #import pdb; pdb.set_trace()
-        #outputs['pred_obj_logits'].shape : torch.Size([8, 100, 82])
-        #outputs['pred_logits'].shape : torch.Size([8, 100, 29])
-        #outputs['pred_obj_boxes'].shape : torch.Size([8, 100, 4])
-        #outputs['pred_sub_boxes'].shape : torch.Size([8, 100, 4])
         cost_class = self.cost_verb_class if dtype=='hoi' else self.cost_att_class
         bs, num_queries = outputs['pred_obj_logits'].shape[:2]
-        out_obj_prob = outputs['pred_obj_logits'].flatten(0, 1).softmax(-1)
-        
-        #vaw : outputs['pred_logits'].shape : torch.Size([620])
-        #hoi : outputs['pred_logits'].shape : torch.Size([8, 100, 117])
+        out_obj_prob = outputs['pred_obj_logits'].flatten(0, 1).softmax(-1)    
         out_prob = outputs['pred_logits'].flatten(0, 1).sigmoid()
         if dtype=='hoi':
             out_sub_bbox = outputs['pred_sub_boxes'].flatten(0, 1)
@@ -241,9 +233,5 @@ def build_matcher(args):
     if args.hoi or args.att_det or args.mtl:
         return HungarianMatcherHOI(cost_obj_class=args.set_cost_obj_class, cost_class=args.cost_class,
                                     cost_bbox=args.set_cost_bbox, cost_giou=args.set_cost_giou)
-        #import pdb; pdb.set_trace()
-        # return HungarianMatcherHOI_orig(cost_obj_class=args.set_cost_obj_class, cost_verb_class=args.set_cost_verb_class,
-        #                            cost_bbox=args.set_cost_bbox, cost_giou=args.set_cost_giou)
-
     else:
         return HungarianMatcher(cost_class=args.set_cost_class, cost_bbox=args.set_cost_bbox, cost_giou=args.set_cost_giou)

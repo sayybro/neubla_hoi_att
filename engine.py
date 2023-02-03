@@ -25,7 +25,6 @@ from datasets.panoptic_eval import PanopticEvaluator
 from datasets.hico_eval import HICOEvaluator
 from datasets.vcoco_eval import VCOCOEvaluator, VCOCOEvaluator_orig
 from datasets.vaw_eval import VAWEvaluator
-#from mixup.mixup import mixup_data, mixup_criterion
 
 
 
@@ -52,29 +51,21 @@ def train_one_epoch(model: torch.nn.Module, criterion: torch.nn.Module,
         samples = samples.to(device)
         targets = [{k: v.to(device)  if type(v)!=str else v for k, v in t.items()} for t in targets]
         dtype=targets[0]['type']
-        dataset=targets[0]['dataset']
-        # if dtype == 'att':
-        #     attribute_outputs, outputs = model(samples,targets,dtype,dataset)
-        # else:
-        outputs = model(samples,targets,dtype,dataset)
+        dataset=targets[0]['dataset']        
         
-        # if dtype == 'att':
-        #     loss_dict = criterion(outputs, targets, attribute_outputs)
-        # else:
+        outputs = model(samples,targets,dtype,dataset)        
         loss_dict = criterion(outputs, targets)
-        #loss_dict = criterion(outputs, targets)
         weight_dict = criterion.weight_dict
+        
         losses = sum(loss_dict[k] * weight_dict[k] for k in loss_dict.keys() if k in weight_dict)
-
-        # reduce losses over all GPUs for logging purposes
         loss_dict_reduced = utils.reduce_dict(loss_dict)
         loss_dict_reduced_unscaled = {f'{k}_unscaled': v
                                       for k, v in loss_dict_reduced.items()}
         loss_dict_reduced_scaled = {k: v * weight_dict[k]
                                     for k, v in loss_dict_reduced.items() if k in weight_dict}
         losses_reduced_scaled = sum(loss_dict_reduced_scaled.values())
-
         loss_value = losses_reduced_scaled.item()
+        
         if not math.isfinite(loss_value):
             print("Loss is {}, stopping training".format(loss_value))
             print(loss_dict_reduced)
@@ -89,11 +80,8 @@ def train_one_epoch(model: torch.nn.Module, criterion: torch.nn.Module,
         metric_logger.update(loss=loss_value, **loss_dict_reduced_scaled)
         if hasattr(criterion, 'loss_labels'):
             metric_logger.update(class_error=loss_dict_reduced['class_error'])
-        # else:
-        #     metric_logger.update(obj_class_error=loss_dict_reduced['obj_class_error'])
         metric_logger.update(lr=optimizer.param_groups[0]["lr"])
         
-    # gather the stats from all processes
     metric_logger.synchronize_between_processes()
     print("Averaged stats:", metric_logger)
     if utils.get_rank() == 0 and log: wandb.log(loss_dict_reduced_scaled)
@@ -111,7 +99,6 @@ def evaluate(model, criterion, postprocessors, data_loader, base_ds, device, out
 
     iou_types = tuple(k for k in ('segm', 'bbox') if k in postprocessors.keys())
     coco_evaluator = CocoEvaluator(base_ds, iou_types)
-    # coco_evaluator.coco_eval[iou_types[0]].params.iouThrs = [0, 0.1, 0.5, 0.75]
 
     panoptic_evaluator = None
     if 'panoptic' in postprocessors.keys():
@@ -129,7 +116,6 @@ def evaluate(model, criterion, postprocessors, data_loader, base_ds, device, out
         loss_dict = criterion(outputs, targets)
         weight_dict = criterion.weight_dict
 
-        # reduce losses over all GPUs for logging purposes
         loss_dict_reduced = utils.reduce_dict(loss_dict)
         loss_dict_reduced_scaled = {k: v * weight_dict[k]
                                     for k, v in loss_dict_reduced.items() if k in weight_dict}
@@ -160,7 +146,6 @@ def evaluate(model, criterion, postprocessors, data_loader, base_ds, device, out
 
             panoptic_evaluator.update(res_pano)
 
-    # gather the stats from all processes
     metric_logger.synchronize_between_processes()
     print("Averaged stats:", metric_logger)
     if coco_evaluator is not None:
@@ -168,7 +153,6 @@ def evaluate(model, criterion, postprocessors, data_loader, base_ds, device, out
     if panoptic_evaluator is not None:
         panoptic_evaluator.synchronize_between_processes()
 
-    # accumulate predictions from all images
     if coco_evaluator is not None:
         coco_evaluator.accumulate()
         coco_evaluator.summarize()
@@ -206,10 +190,8 @@ def evaluate_hoi(dataset_file, model, postprocessors, data_loader, subject_categ
         results = postprocessors['hoi'](outputs, orig_target_sizes)
 
         preds.extend(list(itertools.chain.from_iterable(utils.all_gather(results))))
-        # For avoiding a runtime error, the copy is used
         gts.extend(list(itertools.chain.from_iterable(utils.all_gather(copy.deepcopy(targets)))))
 
-    # gather the stats from all processes
     metric_logger.synchronize_between_processes()
 
     img_ids = [img_gts['id'] for img_gts in gts]
@@ -218,7 +200,6 @@ def evaluate_hoi(dataset_file, model, postprocessors, data_loader, subject_categ
     gts = [img_gts for i, img_gts in enumerate(gts) if i in indices]
 
     dataset_name = os.fspath(data_loader.dataset.img_folder)
-    #import pdb; pdb.set_trace()
     if dataset_file == 'hico':
         evaluator = HICOEvaluator(preds, gts, subject_category_id, data_loader.dataset.rare_triplets,
                                   data_loader.dataset.non_rare_triplets, data_loader.dataset.correct_mat)
@@ -240,10 +221,10 @@ def evaluate_hoi_att(dataset_file, model, postprocessors, data_loader, subject_c
     gts = []
     indices = []
     for samples, targets in metric_logger.log_every(data_loader, 10, header):
-        dtype = targets[0]['type'] #
-        dataset=targets[0]['dataset'] #'hico','vcoco','vaw'
+        dtype = targets[0]['type'] 
+        dataset=targets[0]['dataset'] 
         samples = samples.to(device)
-        #import pdb; pdb.set_trace()
+        
         outputs = model(samples,dtype,dataset)
 
         orig_target_sizes = torch.stack([t["orig_size"] for t in targets], dim=0)
