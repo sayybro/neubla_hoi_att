@@ -34,12 +34,9 @@ def train_one_epoch(model: torch.nn.Module, criterion: torch.nn.Module,
     model.train()
     criterion.train()
 
-
     metric_logger = utils.MetricLogger(delimiter="") 
     metric_logger.add_meter('lr', utils.SmoothedValue(window_size=1, fmt='{value:.6f}'))
     
-
-
     if hasattr(criterion, 'loss_labels'):
         metric_logger.add_meter('class_error', utils.SmoothedValue(window_size=1, fmt='{value:.2f}'))
 
@@ -184,7 +181,6 @@ def evaluate_hoi(dataset_file, model, postprocessors, data_loader, subject_categ
     for samples, targets in metric_logger.log_every(data_loader, 10, header):
         samples = samples.to(device)
         
-        
         outputs = model(samples)
         orig_target_sizes = torch.stack([t["orig_size"] for t in targets], dim=0)
         results = postprocessors['hoi'](outputs, orig_target_sizes)
@@ -223,10 +219,8 @@ def evaluate_hoi_att(dataset_file, model, postprocessors, data_loader, subject_c
     for samples, targets in metric_logger.log_every(data_loader, 10, header):
         dtype = targets[0]['type'] 
         dataset=targets[0]['dataset'] 
-        samples = samples.to(device)
-        
+        samples = samples.to(device)        
         outputs = model(samples,targets,dtype,dataset)
-
         orig_target_sizes = torch.stack([t["orig_size"] for t in targets], dim=0)
         results = postprocessors(outputs, orig_target_sizes)
 
@@ -236,7 +230,6 @@ def evaluate_hoi_att(dataset_file, model, postprocessors, data_loader, subject_c
 
     # gather the stats from all processes
     metric_logger.synchronize_between_processes()
-
     img_ids = [img_gts['id'] for img_gts in gts]
     _, indices = np.unique(img_ids, return_index=True)
     preds = [img_preds for i, img_preds in enumerate(preds) if i in indices]

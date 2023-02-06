@@ -10,15 +10,14 @@ if __name__ == "__main__":
                         help='path to model prediction numpy array file')
     parser.add_argument('--fpath_label', type=str, required=True,
                         help='path to groundtruth label file')
-    
     parser.add_argument('--fpath_attribute_index', type=str,
-                        default='data/vaw/attribute_index.json')
+                        default='data/vaw/annotations/attribute_index.json') #o
     parser.add_argument('--fpath_attribute_types', type=str,
-                        default='data/vaw//attribute_types.json')
+                        default='data/vaw/annotations/attribute_types.json') #o
     parser.add_argument('--fpath_attribute_parent_types', type=str,
-                        default='data/vaw//attribute_parent_types.json')
+                        default='data/vaw/annotations/attribute_parent_types.json') #o
     parser.add_argument('--fpath_head_tail', type=str,
-                        default='data/vaw//head_tail.json')
+                        default='data/vaw/annotations/head_tail.json') #o
 
     parser.add_argument('--output', type=str, default='output_detailed.txt')
     
