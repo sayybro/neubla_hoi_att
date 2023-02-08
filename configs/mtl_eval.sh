@@ -6,7 +6,7 @@ EXP_DIR=logs_run_001
 PY_ARGS=${@:1}
 
 python -u main.py \
-    --pretrained checkpoints/mtl_all/checkpoint.pth \
+    --pretrained checkpoints/version2/mtl/checkpoint.pth \
     --mtl \
     --update_obj_att \
     --dataset_file vaw \

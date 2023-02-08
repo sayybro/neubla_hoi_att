@@ -19,7 +19,7 @@ from torch.utils.data import DataLoader, DistributedSampler
 import datasets
 import util.misc as utils
 from datasets import build_dataset, get_coco_api_from_dataset
-from engine import evaluate, train_one_epoch, evaluate_hoi_att, evaluate_hoi
+from engine import evaluate, train_one_epoch, evaluate_hoi, evaluate_att
 from models import build_model
 from torch.utils.data.dataset import ConcatDataset
 from util.sampler import BatchSchedulerSampler, ComboBatchSampler
@@ -305,7 +305,10 @@ def main(args):
         if args.hoi or args.att_det or args.mtl:
             if args.mtl:
                 for dlv in data_loader_val:
-                    test_stats,dataset_name = evaluate_hoi_att(args.dataset_file, model, postprocessors, dlv, args.subject_category_id, device, args)
+                    if args.dataset_file == 'vaw':
+                        test_stats,dataset_name = evaluate_att(args.dataset_file, model, postprocessors, dlv, args.subject_category_id, device, args)                    
+                    else: #'hico' or 'vcoco
+                        test_stats,dataset_name = evaluate_hoi(args.dataset_file, model, postprocessors, dlv, args.subject_category_id, device, args)
                     if 'v-coco' in dataset_name:
                         log_stats = {**{f'test_{k}': v for k, v in test_stats.items()}}
                         if args.output_dir:

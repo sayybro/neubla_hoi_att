@@ -431,15 +431,13 @@ class PostProcessHOI_ATT(nn.Module):
 
     @torch.no_grad()
     def forward(self, outputs, target_sizes):
-        #import pdb; pdb.set_trace()
+
         if outputs['type'] == 'hoi':
             out_obj_logits, out_verb_logits, out_sub_boxes, out_obj_boxes = outputs['pred_obj_logits'], \
                                                                             outputs['pred_logits'], \
                                                                             outputs['pred_sub_boxes'], \
                                                                             outputs['pred_obj_boxes']
 
-            # assert len(out_obj_logits) == len(target_sizes)
-            # assert target_sizes.shape[1] == 2
             if outputs['dataset']=='vcoco':
                 obj_prob = F.softmax(out_obj_logits, -1)
                 obj_scores, obj_labels = obj_prob[..., :-1].max(-1)
