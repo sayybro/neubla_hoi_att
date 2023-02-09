@@ -29,7 +29,7 @@ def get_args_parser():
     parser = argparse.ArgumentParser('Set transformer detector', add_help=False)
     parser.add_argument('--lr', default=1e-4, type=float)
     parser.add_argument('--lr_backbone', default=1e-5, type=float)
-    parser.add_argument('--batch_size', default=2, type=int)
+    parser.add_argument('--batch_size', default=8, type=int)
     parser.add_argument('--weight_decay', default=1e-4, type=float)
     parser.add_argument('--epochs', default=150, type=int)
     parser.add_argument('--lr_drop', default=100, type=int)
@@ -305,6 +305,7 @@ def main(args):
         if args.hoi or args.att_det or args.mtl:
             if args.mtl:
                 for dlv in data_loader_val:
+                    #test_stats,dataset_name = evaluate_hoi_att(args.dataset_file, model, postprocessors, dlv, args.subject_category_id, device, args)
                     if args.dataset_file == 'vaw':
                         test_stats,dataset_name = evaluate_att(args.dataset_file, model, postprocessors, dlv, args.subject_category_id, device, args)                    
                     else: #'hico' or 'vcoco

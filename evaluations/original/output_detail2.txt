@@ -1,0 +1,228 @@
+----------ALL----------
+mAP: 0.0742
+Per-class (threshold 0.5):
+- recall: 0.1480
+- precision: 0.1100
+- f1: 0.1038
+- bacc: 0.5723
+Per-class (top 15):
+- recall: 0.4067
+- precision: 0.0534
+- f1: 0.0892
+Overall (threshold 0.5):
+- recall: 0.1693
+- precision: 0.1302
+- f1: 0.1472
+Overall (top 15):
+- recall: 0.4889
+- precision: 0.0584
+- f1: 0.1044
+----------HEAD----------
+mAP: 0.0851
+Per-class (threshold 0.5):
+- recall: 0.1534
+- precision: 0.1270
+- f1: 0.1216
+- bacc: 0.5746
+Per-class (top 15):
+- recall: 0.4480
+- precision: 0.0641
+- f1: 0.1078
+Overall (threshold 0.5):
+- recall: 0.1728
+- precision: 0.1744
+- f1: 0.1736
+Overall (top 15):
+- recall: 0.5068
+- precision: 0.0712
+- f1: 0.1249
+----------MEDIUM----------
+mAP: 0.0682
+Per-class (threshold 0.5):
+- recall: 0.1597
+- precision: 0.0889
+- f1: 0.0954
+- bacc: 0.5785
+Per-class (top 15):
+- recall: 0.4073
+- precision: 0.0459
+- f1: 0.0771
+Overall (threshold 0.5):
+- recall: 0.1589
+- precision: 0.0550
+- f1: 0.0817
+Overall (top 15):
+- recall: 0.4122
+- precision: 0.0281
+- f1: 0.0526
+----------TAIL----------
+mAP: 0.0512
+Per-class (threshold 0.5):
+- recall: 0.0906
+- precision: 0.1098
+- f1: 0.0612
+- bacc: 0.5444
+Per-class (top 15):
+- recall: 0.2462
+- precision: 0.0353
+- f1: 0.0552
+Overall (threshold 0.5):
+- recall: 0.0918
+- precision: 0.0234
+- f1: 0.0373
+Overall (top 15):
+- recall: 0.2484
+- precision: 0.0125
+- f1: 0.0238
+----------COLOR----------
+mAP: 0.0755
+Per-class (threshold 0.5):
+- recall: 0.1300
+- precision: 0.1174
+- f1: 0.1096
+- bacc: 0.5623
+Per-class (top 15):
+- recall: 0.3821
+- precision: 0.0530
+- f1: 0.0894
+Overall (threshold 0.5):
+- recall: 0.2468
+- precision: 0.2001
+- f1: 0.2210
+Overall (top 15):
+- recall: 0.5978
+- precision: 0.0834
+- f1: 0.1464
+----------MATERIAL----------
+mAP: 0.1015
+Per-class (threshold 0.5):
+- recall: 0.2149
+- precision: 0.1401
+- f1: 0.1478
+- bacc: 0.6054
+Per-class (top 15):
+- recall: 0.5314
+- precision: 0.0680
+- f1: 0.1151
+Overall (threshold 0.5):
+- recall: 0.2285
+- precision: 0.1711
+- f1: 0.1956
+Overall (top 15):
+- recall: 0.5854
+- precision: 0.0805
+- f1: 0.1416
+----------SHAPE----------
+mAP: 0.0568
+Per-class (threshold 0.5):
+- recall: 0.0967
+- precision: 0.1002
+- f1: 0.0809
+- bacc: 0.5471
+Per-class (top 15):
+- recall: 0.3353
+- precision: 0.0522
+- f1: 0.0850
+Overall (threshold 0.5):
+- recall: 0.0682
+- precision: 0.0885
+- f1: 0.0770
+Overall (top 15):
+- recall: 0.3478
+- precision: 0.0484
+- f1: 0.0849
+----------SIZE----------
+mAP: 0.0439
+Per-class (threshold 0.5):
+- recall: 0.0407
+- precision: 0.0933
+- f1: 0.0477
+- bacc: 0.5187
+Per-class (top 15):
+- recall: 0.2874
+- precision: 0.0419
+- f1: 0.0715
+Overall (threshold 0.5):
+- recall: 0.0519
+- precision: 0.1432
+- f1: 0.0762
+Overall (top 15):
+- recall: 0.3896
+- precision: 0.0632
+- f1: 0.1087
+----------ACTION----------
+mAP: 0.1444
+Per-class (threshold 0.5):
+- recall: 0.2257
+- precision: 0.1975
+- f1: 0.1848
+- bacc: 0.6119
+Per-class (top 15):
+- recall: 0.4755
+- precision: 0.1027
+- f1: 0.1635
+Overall (threshold 0.5):
+- recall: 0.2095
+- precision: 0.2210
+- f1: 0.2151
+Overall (top 15):
+- recall: 0.5508
+- precision: 0.1120
+- f1: 0.1862
+----------STATE----------
+mAP: 0.0722
+Per-class (threshold 0.5):
+- recall: 0.1700
+- precision: 0.1024
+- f1: 0.1057
+- bacc: 0.5831
+Per-class (top 15):
+- recall: 0.4120
+- precision: 0.0520
+- f1: 0.0891
+Overall (threshold 0.5):
+- recall: 0.1765
+- precision: 0.1512
+- f1: 0.1629
+Overall (top 15):
+- recall: 0.4761
+- precision: 0.0683
+- f1: 0.1194
+----------TEXTURE----------
+mAP: 0.0584
+Per-class (threshold 0.5):
+- recall: 0.0925
+- precision: 0.1029
+- f1: 0.0833
+- bacc: 0.5450
+Per-class (top 15):
+- recall: 0.3121
+- precision: 0.0545
+- f1: 0.0865
+Overall (threshold 0.5):
+- recall: 0.0979
+- precision: 0.0926
+- f1: 0.0951
+Overall (top 15):
+- recall: 0.3470
+- precision: 0.0493
+- f1: 0.0863
+----------OTHER----------
+mAP: 0.0619
+Per-class (threshold 0.5):
+- recall: 0.1408
+- precision: 0.0910
+- f1: 0.0875
+- bacc: 0.5689
+Per-class (top 15):
+- recall: 0.4019
+- precision: 0.0431
+- f1: 0.0733
+Overall (threshold 0.5):
+- recall: 0.1388
+- precision: 0.0677
+- f1: 0.0910
+Overall (top 15):
+- recall: 0.4248
+- precision: 0.0331
+- f1: 0.0614

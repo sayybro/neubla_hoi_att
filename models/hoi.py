@@ -33,14 +33,11 @@ class DETRHOI(nn.Module):
                 if 'vcoco' in args.mtl_data:
                     self.vcoco_verb_class_embed = nn.Linear(hidden_dim, num_classes['vcoco'])
                 if 'hico' in args.mtl_data:
-
                     self.hico_verb_class_embed = nn.Linear(hidden_dim, num_classes['hico']) 
-            if 'vaw' in args.mtl_data:
-                
+            if 'vaw' in args.mtl_data:                
                 self.att_class_embed = nn.Linear(hidden_dim, num_classes['att'])
-  
-            self.obj_class_embed = nn.Linear(hidden_dim, num_obj_classes + 1) 
-        
+            self.obj_class_embed = nn.Linear(hidden_dim, num_obj_classes + 1)         
+            
         #single-task
         else:
             if args.hoi:
@@ -60,41 +57,68 @@ class DETRHOI(nn.Module):
         self.fc = nn.Linear(hidden_dim, args.num_att_classes)
 
 
-    def forward(self, samples: NestedTensor, targets, dtype: str='', dataset:str=''):
+    def forward(self, samples: NestedTensor, targets, dtype: str='', dataset:str='',args=None):
+        
         if not isinstance(samples, NestedTensor): 
             samples = nested_tensor_from_tensor_list(samples)   
 
         features, pos = self.backbone(samples)
-
         src, mask = features[-1].decompose()
         assert mask is not None
-
         hs = self.transformer(self.input_proj(src), mask, self.query_embed.weight, pos[-1])[0]
-
+        
+        #for evaluation
         if dtype == 'att':
-
-            object_boxes = [torch.Tensor([int(i)]+self.convert_bbox(box.tolist())) for i, target in enumerate(targets) for box in target['boxes']]
-            box_tensors = torch.stack(object_boxes,0) #[K,5] , K: box annotation length in mini-batch
-            encoder_src = self.input_proj(src)
-            B,C,H,W = encoder_src.shape
-            encoder_src = encoder_src.flatten(2).permute(2, 0, 1)
-            pos_embed = pos[-1].flatten(2).permute(2, 0, 1)
-            mask = mask.flatten(1)
-            memory = self.transformer.encoder(encoder_src, src_key_padding_mask=mask, pos=pos_embed)
-            encoder_output = memory.permute(1, 2, 0) 
-            encoder_output = encoder_output.view([B,C,H,W]) 
-            box_roi_align = ROIAlign(output_size=(7,7), spatial_scale=1.0, sampling_ratio=-1, aligned=True)         
-            feature_H, feature_W = encoder_output.shape[2], encoder_output.shape[3]
-
-            #unnormalize box size
-            box_tensors[...,1], box_tensors[...,3] = feature_W*box_tensors[...,1], feature_W*box_tensors[...,3] 
-            box_tensors[...,2], box_tensors[...,4] = feature_H*box_tensors[...,2], feature_H*box_tensors[...,4] 
+            if args.eval: #eval과 train 구분 : vaw_orig_train(center_x,cneter_y,w,h)과 vaw_orig_test(left_top_x,left_top_y,right_bottom_x,right_bottom_y)의 bbox 형식이 달라서 eval mode 때 roi align이 feature에 제대로 적용되지 않음. 
+                object_boxes = torch.cat([torch.stack([target['boxes'][...,0]/target['orig_size'][1],target['boxes'][...,1]/target['orig_size'][0],target['boxes'][...,2]/target['orig_size'][1],target['boxes'][...,3]/target['orig_size'][0]],axis=1) for target in targets])
+                batch_index = torch.cat([torch.Tensor([int(i)]) for i, target in enumerate(targets) for _ in target['boxes']])
+                #import pdb; pdb.set_trace()
+                box_tensors = torch.cat([batch_index.unsqueeze(1).cuda(),object_boxes], axis=1) #[K,5]
+                encoder_src = self.input_proj(src)
+                B,C,H,W = encoder_src.shape 
+                encoder_src = encoder_src.flatten(2).permute(2, 0, 1)
+                pos_embed = pos[-1].flatten(2).permute(2, 0, 1)
+                mask = mask.flatten(1)
+                memory = self.transformer.encoder(encoder_src, src_key_padding_mask=mask, pos=pos_embed)
+                encoder_output = memory.permute(1, 2, 0) 
+                encoder_output = encoder_output.view([B,C,H,W]) 
+                box_roi_align = ROIAlign(output_size=(7,7), spatial_scale=1.0, sampling_ratio=-1, aligned=True)         
+                feature_H, feature_W = encoder_output.shape[2], encoder_output.shape[3]
             
-            pooled_feature = box_roi_align(input = encoder_output, rois = box_tensors.cuda()) 
-            x = self.conv(pooled_feature) 
-            x = self.avgpool(x) 
-            x = torch.flatten(x, 1)
-            outputs_class = self.fc(x) 
+                #unnormalize box size to feature map size 
+                box_tensors[...,1], box_tensors[...,3] = feature_W*box_tensors[...,1], feature_W*box_tensors[...,3] 
+                box_tensors[...,2], box_tensors[...,4] = feature_H*box_tensors[...,2], feature_H*box_tensors[...,4] 
+                
+                pooled_feature = box_roi_align(input = encoder_output, rois = box_tensors.cuda()) 
+                x = self.conv(pooled_feature) 
+                x = self.avgpool(x) 
+                x = torch.flatten(x, 1) 
+                outputs_class = self.fc(x) 
+            
+            else:
+                object_boxes = [torch.Tensor([int(i)]+self.convert_bbox(box.tolist())) for i, target in enumerate(targets) for box in target['boxes']]
+                box_tensors = torch.stack(object_boxes,0) #[K,5] , K: box annotation length in mini-batch
+                encoder_src = self.input_proj(src)
+                B,C,H,W = encoder_src.shape
+                encoder_src = encoder_src.flatten(2).permute(2, 0, 1)
+                pos_embed = pos[-1].flatten(2).permute(2, 0, 1)
+                mask = mask.flatten(1)
+                memory = self.transformer.encoder(encoder_src, src_key_padding_mask=mask, pos=pos_embed)
+                encoder_output = memory.permute(1, 2, 0) 
+                encoder_output = encoder_output.view([B,C,H,W]) 
+                box_roi_align = ROIAlign(output_size=(7,7), spatial_scale=1.0, sampling_ratio=-1, aligned=True)         
+                feature_H, feature_W = encoder_output.shape[2], encoder_output.shape[3]
+
+                #unnormalize box size
+                box_tensors[...,1], box_tensors[...,3] = feature_W*box_tensors[...,1], feature_W*box_tensors[...,3] 
+                box_tensors[...,2], box_tensors[...,4] = feature_H*box_tensors[...,2], feature_H*box_tensors[...,4] 
+                
+                pooled_feature = box_roi_align(input = encoder_output, rois = box_tensors.cuda()) 
+                x = self.conv(pooled_feature) 
+                x = self.avgpool(x) 
+                x = torch.flatten(x, 1)
+                outputs_class = self.fc(x) 
+                
 
         if self.mtl:    
             if dtype=='hoi':
@@ -142,9 +166,14 @@ class DETRHOI(nn.Module):
         return out
 
     def convert_bbox(self,bbox:List): #annotation bbox (c_x,c_y,w,h)-> (x1,y1,x2,y2) for roi align
+        #instance_bbox: [x, y, width, height]
+        #import pdb; pdb.set_trace()
         c_x, c_y, w,h = bbox[0], bbox[1], bbox[2], bbox[3]
         x1,y1 = c_x-(w/2), c_y-(h/2)
         x2,y2 = c_x+(w/2), c_y+(h/2)  
+        
+        # x1,y1 = bbox[0], bbox[1]
+        # x2,y2 = x1 + bbox[2], y1 + bbox[3]
         return [x1,y1,x2,y2]
 
     @torch.jit.unused

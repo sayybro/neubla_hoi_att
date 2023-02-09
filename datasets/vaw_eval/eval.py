@@ -20,6 +20,7 @@ if __name__ == "__main__":
                         default='data/vaw/annotations/head_tail.json') #o
 
     parser.add_argument('--output', type=str, default='output_detailed.txt')
+    parser.add_argument('--output2', type=str, default='output_detailed2.txt')
     
     args = parser.parse_args()
 
@@ -39,27 +40,43 @@ if __name__ == "__main__":
     CATEGORIES = ['all', 'head', 'medium', 'tail'] + \
         list(evaluator.attribute_parent_type.keys())
 
-    for category in CATEGORIES:
-        print(f"----------{category.upper()}----------")
-        print(f"mAP: {scores_per_class[category]['ap']:.4f}")
+    with open(args.output2, 'w') as f:
+        for category in CATEGORIES:
+            
+            print(f"----------{category.upper()}----------")
+            print(f"mAP: {scores_per_class[category]['ap']:.4f}")
+            f.write(f"----------{category.upper()}----------\n")
+            f.write(f"mAP: {scores_per_class[category]['ap']:.4f}\n")
+            
+            
+            print("Per-class (threshold 0.5):")
+            f.write("Per-class (threshold 0.5):\n")
+            
+            for metric in ['recall', 'precision', 'f1', 'bacc']:
+                if metric in scores_per_class[category]:
+                    print(f"- {metric}: {scores_per_class[category][metric]:.4f}")
+                    f.write(f"- {metric}: {scores_per_class[category][metric]:.4f}\n")
+                    
+            print("Per-class (top 15):")
+            f.write("Per-class (top 15):\n")
+            for metric in ['recall', 'precision', 'f1']:
+                if metric in scores_per_class_topk[category]:
+                    print(f"- {metric}: {scores_per_class_topk[category][metric]:.4f}")
+                    f.write(f"- {metric}: {scores_per_class_topk[category][metric]:.4f}\n")
         
-        print("Per-class (threshold 0.5):")
-        for metric in ['recall', 'precision', 'f1', 'bacc']:
-            if metric in scores_per_class[category]:
-                print(f"- {metric}: {scores_per_class[category][metric]:.4f}")
-        print("Per-class (top 15):")
-        for metric in ['recall', 'precision', 'f1']:
-            if metric in scores_per_class_topk[category]:
-                print(f"- {metric}: {scores_per_class_topk[category][metric]:.4f}")
-    
-        print("Overall (threshold 0.5):")
-        for metric in ['recall', 'precision', 'f1', 'bacc']:
-            if metric in scores_overall[category]:
-                print(f"- {metric}: {scores_overall[category][metric]:.4f}")
-        print("Overall (top 15):")
-        for metric in ['recall', 'precision', 'f1']:
-            if metric in scores_overall_topk[category]:
-                print(f"- {metric}: {scores_overall_topk[category][metric]:.4f}")
+            print("Overall (threshold 0.5):")
+            f.write("Overall (threshold 0.5):\n")            
+            for metric in ['recall', 'precision', 'f1', 'bacc']:
+                if metric in scores_overall[category]:
+                    print(f"- {metric}: {scores_overall[category][metric]:.4f}")
+                    f.write(f"- {metric}: {scores_overall[category][metric]:.4f}\n")
+                    
+            print("Overall (top 15):")
+            f.write("Overall (top 15):\n")
+            for metric in ['recall', 'precision', 'f1']:
+                if metric in scores_overall_topk[category]:
+                    print(f"- {metric}: {scores_overall_topk[category][metric]:.4f}")
+                    f.write(f"- {metric}: {scores_overall_topk[category][metric]:.4f}\n")
 
     with open(args.output, 'w') as f:
         f.write('| {:<18}| AP\t\t| Recall@K\t| B.Accuracy\t| N_Pos\t| N_Neg\t|\n'.format('Name'))

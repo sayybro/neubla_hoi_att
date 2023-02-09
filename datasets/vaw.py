@@ -228,6 +228,7 @@ def build(image_set, args):
         'train': (root / 'images' , root / 'annotations' / 'vaw_orig_train.json'),
         #'train': (root / 'images' , root / 'annotations' / 'vaw_coco_train.json'),
         'val': (root / 'images' , root / 'annotations' / 'vaw_orig_test.json'),
+        #'val': (root / 'images' , root / 'annotations' / 'vaw_coco_val.json'),
         'test': (root / 'images' , root / 'annotations' / 'vaw_orig_test.json')
     }
 

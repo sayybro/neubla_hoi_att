@@ -50,7 +50,7 @@ def train_one_epoch(model: torch.nn.Module, criterion: torch.nn.Module,
         dtype=targets[0]['type']
         dataset=targets[0]['dataset']        
         
-        outputs = model(samples,targets,dtype,dataset)        
+        outputs = model(samples,targets,dtype,dataset,args)        
         loss_dict = criterion(outputs, targets)
         weight_dict = criterion.weight_dict
         
@@ -217,6 +217,7 @@ def evaluate_hoi(dataset_file, model, postprocessors, data_loader, subject_categ
     indices = []
 
     for samples, targets in metric_logger.log_every(data_loader, 10, header):
+
         dtype = targets[0]['type'] 
         dataset=targets[0]['dataset'] 
         samples = samples.to(device)        
@@ -255,20 +256,29 @@ def evaluate_att(dataset_file, model, postprocessors, data_loader, subject_categ
     header = 'Test:'
     preds = []
     gts = []
-    #indices = []
-
-    #len(data_loader) : 5196
+    samples, targets = iter(data_loader).next()
+    dtype = targets[0]['type'] 
+    dataset=targets[0]['dataset'] 
     for samples, targets in metric_logger.log_every(data_loader, 10, header):
         dtype = targets[0]['type'] 
         dataset=targets[0]['dataset'] 
         samples = samples.to(device)        
-        outputs = model(samples,targets,dtype,dataset) 
-        orig_target_sizes = torch.stack([t["orig_size"] for t in targets], dim=0)
-        results = postprocessors(outputs, orig_target_sizes)
-        preds.extend(list(itertools.chain.from_iterable(utils.all_gather(results))))
-        gts.extend(list(itertools.chain.from_iterable(utils.all_gather(copy.deepcopy(targets)))))
+        outputs = model(samples,targets,dtype,dataset,args)['pred_logits'].sigmoid()
+        preds.extend(outputs.detach().cpu().numpy())
+        gts.extend(torch.cat([target['pos_att_classes'] for target in targets]).numpy())
+        assert len(preds) == len(gts)
+        #import pdb; pdb.set_trace()
+        #orig_target_sizes = torch.stack([t["orig_size"] for t in targets], dim=0)
+        #results = postprocessors(outputs, orig_target_sizes)
+        #preds.extend(list(itertools.chain.from_iterable(utils.all_gather(results))))
 
+        #gts.extend(list(itertools.chain.from_iterable(utils.all_gather(copy.deepcopy(targets)))))
+        #import pdb; pdb.set_trace()
     import pdb; pdb.set_trace()
+    preds_array = np.array(preds)
+    gts_array = np.array(gts)
+    np.save('evaluations/original/pred.npy', np.array(preds))
+    np.save('evaluations/original/gts.npy', np.array(gts))
     metric_logger.synchronize_between_processes()
     img_ids = [img_gts['id'] for img_gts in gts]
     _, indices = np.unique(img_ids, return_index=True)
