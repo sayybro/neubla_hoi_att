@@ -167,28 +167,20 @@ class DETRHOI(nn.Module):
 
     def convert_bbox(self,bbox:List): #annotation bbox (c_x,c_y,w,h)-> (x1,y1,x2,y2) for roi align
         #instance_bbox: [x, y, width, height]
-        #import pdb; pdb.set_trace()
         c_x, c_y, w,h = bbox[0], bbox[1], bbox[2], bbox[3]
         x1,y1 = c_x-(w/2), c_y-(h/2)
         x2,y2 = c_x+(w/2), c_y+(h/2)  
-        
         # x1,y1 = bbox[0], bbox[1]
         # x2,y2 = x1 + bbox[2], y1 + bbox[3]
         return [x1,y1,x2,y2]
 
     @torch.jit.unused
     def _set_aux_loss_hoi(self, outputs_obj_class, outputs_class, outputs_sub_coord, outputs_obj_coord):
-        # this is a workaround to make torchscript happy, as torchscript
-        # doesn't support dictionary with non-homogeneous values, such
-        # as a dict having both a Tensor and a list.
         return [{'pred_obj_logits': a, 'pred_logits': b, 'pred_sub_boxes': c, 'pred_obj_boxes': d}
                 for a, b, c, d in zip(outputs_obj_class[:-1], outputs_class[:-1], 
                                       outputs_sub_coord[:-1], outputs_obj_coord[:-1])]
     @torch.jit.unused
     def _set_aux_loss_att(self, outputs_obj_class, outputs_class, outputs_obj_coord):
-        # this is a workaround to make torchscript happy, as torchscript
-        # doesn't support dictionary with non-homogeneous values, such
-        # as a dict having both a Tensor and a list.
         return [{'pred_obj_logits': a, 'pred_logits': b, 'pred_obj_boxes': c}
                 for a, b, c in zip(outputs_obj_class[:-1], outputs_class[:-1],
                                        outputs_obj_coord[:-1])]
@@ -351,29 +343,6 @@ class SetCriterionHOI(nn.Module):
             loss_att_ce = self._neg_loss(src_logits[...,inds], target_classes[...,inds])
         losses = {'loss_att_ce': loss_att_ce}        
         return losses
-    
-    # def postprocess_att(self, targets):
-
-    #     pos,neg = [], []
-    #     for target in targets:
-    #         #box label : attribute label = 1 : 1
-    #         if (len(target['boxes']) > 0) and (len(target['pos_att_classes']) == (len(target['boxes']))):
-    #             pos.append(target['pos_att_classes'])
-    #             neg.append(target['neg_att_classes'])
-
-    #         #box label : attribute label = 1 : N
-    #         #torch : scatter
-    #         if (len(target['boxes']) == 1) and (len(target['pos_att_classes']) > (len(target['boxes']))): 
-    #             pos.append(sum(target['pos_att_classes']).unsqueeze(0))
-    #             neg.append(sum(target['pos_att_classes']).unsqueeze(0))
-
-
-    #         if (len(target['boxes']) > 1) and len(target['boxes']) != len(target['pos_att_classes']): 
-    #             tmp = torch.from_numpy(np.tile(np.array(-1),(target['boxes'].shape[0],620))).cuda()
-    #             pos.append(tmp)
-    #             neg.append(tmp)
-                
-    #     return torch.cat(pos), torch.cat(neg)
 
 
     def _neg_loss(self, pred, gt):
@@ -400,13 +369,11 @@ class SetCriterionHOI(nn.Module):
         return loss
 
     def _get_src_permutation_idx(self, indices):
-        # permute predictions following indices
         batch_idx = torch.cat([torch.full_like(src, i) for i, (src, _) in enumerate(indices)])
         src_idx = torch.cat([src for (src, _) in indices])
         return batch_idx, src_idx
 
     def _get_tgt_permutation_idx(self, indices):
-        # permute targets following indices
         batch_idx = torch.cat([torch.full_like(tgt, i) for i, (_, tgt) in enumerate(indices)])
         tgt_idx = torch.cat([tgt for (_, tgt) in indices])
         return batch_idx, tgt_idx
@@ -474,11 +441,9 @@ class PostProcessHOI_ATT(nn.Module):
                 obj_prob = F.softmax(torch.cat([out_obj_logits[...,:-2],out_obj_logits[...,-1:]],-1), -1)
                 obj_scores, obj_labels = obj_prob[..., :-1].max(-1)
             verb_scores = out_verb_logits.sigmoid()
-            
-            #import pdb; pdb.set_trace()
+
             img_h, img_w = target_sizes.unbind(1)
-        
-            #img_h, img_w = target_sizes[1], target_sizes[0]
+
             scale_fct = torch.stack([img_w, img_h, img_w, img_h], dim=1).to(verb_scores.device)
             sub_boxes = box_cxcywh_to_xyxy(out_sub_boxes)
             sub_boxes = sub_boxes * scale_fct[:, None, :]
@@ -486,7 +451,7 @@ class PostProcessHOI_ATT(nn.Module):
             obj_boxes = obj_boxes * scale_fct[:, None, :]
 
             results = []
-            #import pdb; pdb.set_trace()
+
             for os, ol, vs, sb, ob in zip(obj_scores, obj_labels, verb_scores, sub_boxes, obj_boxes):
                 sl = torch.full_like(ol, self.subject_category_id)
                 l = torch.cat((sl, ol))
@@ -508,7 +473,6 @@ class PostProcessHOI_ATT(nn.Module):
             assert len(out_obj_logits) == len(target_sizes)
             assert target_sizes.shape[1] == 2
 
-            # obj_prob = F.softmax(out_obj_logits, -1)
             obj_prob = F.softmax(torch.cat([out_obj_logits[...,:-2],out_obj_logits[...,-1:]],-1), -1)
             obj_scores, obj_labels = obj_prob[..., :-1].max(-1)
 
@@ -520,65 +484,15 @@ class PostProcessHOI_ATT(nn.Module):
             obj_boxes = obj_boxes * scale_fct[:, None, :]
             
             results = []
-            for ol, ats, ob in zip(obj_labels, attr_scores, obj_boxes):
-                # sl = torch.full_like(ol, 0) # self.subject_category_id = 0 in HICO-DET
-                # l = torch.cat((sl, ol))
-                # b = torch.cat((sb, ob))
-                
-                
-                results.append({'labels': ol.to('cpu'), 'boxes': ob.to('cpu')})
-                
+            for ol, ats, ob in zip(obj_labels, attr_scores, obj_boxes):                    
+                results.append({'labels': ol.to('cpu'), 'boxes': ob.to('cpu')})        
                 ids = torch.arange(ob.shape[0])
                 res_dict = {
                     'attr_scores': ats.to('cpu'),
-                    'obj_ids': ids,
-                    
+                    'obj_ids': ids, 
                 }
                 results[-1].update(res_dict)
-
         return results
 
     
 
-# class PostProcessHOI_orig(nn.Module):
-#     def __init__(self, subject_category_id):
-#         super().__init__()
-#         self.subject_category_id = subject_category_id
-
-#     @torch.no_grad()
-#     def forward(self, outputs, target_sizes):
-#         out_obj_logits, out_verb_logits, out_sub_boxes, out_obj_boxes = outputs['pred_obj_logits'], \
-#                                                                         outputs['pred_verb_logits'], \
-#                                                                         outputs['pred_sub_boxes'], \
-#                                                                         outputs['pred_obj_boxes']
-
-#         assert len(out_obj_logits) == len(target_sizes)
-#         assert target_sizes.shape[1] == 2
-
-#         obj_prob = F.softmax(out_obj_logits, -1)
-#         obj_scores, obj_labels = obj_prob[..., :-1].max(-1)
-
-#         verb_scores = out_verb_logits.sigmoid()
-
-#         img_h, img_w = target_sizes.unbind(1)
-#         scale_fct = torch.stack([img_w, img_h, img_w, img_h], dim=1).to(verb_scores.device)
-#         sub_boxes = box_cxcywh_to_xyxy(out_sub_boxes)
-#         sub_boxes = sub_boxes * scale_fct[:, None, :]
-#         obj_boxes = box_cxcywh_to_xyxy(out_obj_boxes)
-#         obj_boxes = obj_boxes * scale_fct[:, None, :]
-
-#         results = []
-#         for os, ol, vs, sb, ob in zip(obj_scores, obj_labels, verb_scores, sub_boxes, obj_boxes):
-#             sl = torch.full_like(ol, self.subject_category_id)
-#             l = torch.cat((sl, ol))
-#             b = torch.cat((sb, ob))
-#             results.append({'labels': l.to('cpu'), 'boxes': b.to('cpu')})
-
-#             vs = vs * os.unsqueeze(1)
-
-#             ids = torch.arange(b.shape[0])
-
-#             results[-1].update({'verb_scores': vs.to('cpu'), 'sub_ids': ids[:ids.shape[0] // 2],
-#                                 'obj_ids': ids[ids.shape[0] // 2:]})
-
-#         return results
