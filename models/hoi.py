@@ -73,7 +73,7 @@ class DETRHOI(nn.Module):
                 object_boxes = torch.cat([torch.stack([target['boxes'][...,0]/target['orig_size'][1],target['boxes'][...,1]/target['orig_size'][0],target['boxes'][...,2]/target['orig_size'][1],target['boxes'][...,3]/target['orig_size'][0]],axis=1) for target in targets])
                 batch_index = torch.cat([torch.Tensor([int(i)]) for i, target in enumerate(targets) for _ in target['boxes']])
                 #import pdb; pdb.set_trace()
-                box_tensors = torch.cat([batch_index.unsqueeze(1).cuda(),object_boxes], axis=1) #[K,5]
+                box_tensors = torch.cat([batch_index.unsqueeze(1).cuda(),object_boxes.cuda()], axis=1) #[K,5]
                 encoder_src = self.input_proj(src)
                 B,C,H,W = encoder_src.shape 
                 encoder_src = encoder_src.flatten(2).permute(2, 0, 1)

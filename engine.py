@@ -274,21 +274,24 @@ def evaluate_att(dataset_file, model, postprocessors, data_loader, subject_categ
 
         #gts.extend(list(itertools.chain.from_iterable(utils.all_gather(copy.deepcopy(targets)))))
         #import pdb; pdb.set_trace()
-    import pdb; pdb.set_trace()
-    preds_array = np.array(preds)
-    gts_array = np.array(gts)
-    np.save('evaluations/original/pred.npy', np.array(preds))
-    np.save('evaluations/original/gts.npy', np.array(gts))
-    metric_logger.synchronize_between_processes()
-    img_ids = [img_gts['id'] for img_gts in gts]
-    _, indices = np.unique(img_ids, return_index=True)
-    preds = [img_preds for i, img_preds in enumerate(preds) if i in indices]
-    gts = [img_gts for i, img_gts in enumerate(gts) if i in indices]
-    dataset_name = os.fspath(data_loader.dataset.img_folder)
+    #import pdb; pdb.set_trace()
+    #preds_array = np.array(preds)
+    #gts_array = np.array(gts)
     
-    if 'vaw' in dataset_name:
-        evaluator = VAWEvaluator(preds, gts, subject_category_id, data_loader.dataset.rare_triplets,
-                                  data_loader.dataset.non_rare_triplets, data_loader.dataset.valid_masks,args.max_pred )
-    stats = evaluator.evaluate()
+    output_dir = args.output_dir
+    np.save(output_dir+'pred.npy', np.array(preds))
+    exit()
+    #np.save('evaluations/original/gts.npy', np.array(gts))
+    #metric_logger.synchronize_between_processes()
+    # img_ids = [img_gts['id'] for img_gts in gts]
+    # _, indices = np.unique(img_ids, return_index=True)
+    # preds = [img_preds for i, img_preds in enumerate(preds) if i in indices]
+    # gts = [img_gts for i, img_gts in enumerate(gts) if i in indices]
+    # dataset_name = os.fspath(data_loader.dataset.img_folder)
+    
+    # if 'vaw' in dataset_name:
+    #     evaluator = VAWEvaluator(preds, gts, subject_category_id, data_loader.dataset.rare_triplets,
+    #                               data_loader.dataset.non_rare_triplets, data_loader.dataset.valid_masks,args.max_pred )
+    # stats = evaluator.evaluate()
 
-    return stats , dataset_name
+    # return stats , dataset_name

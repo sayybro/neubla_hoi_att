@@ -7,6 +7,6 @@ vis/**
 output_video/**
 checkpoints/**
 .venv/
-
+evaluations/**
+*.npy
 !.gitkeep
-
