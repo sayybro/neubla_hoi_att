@@ -10,3 +10,7 @@ checkpoints/**
 evaluations/**
 *.npy
 !.gitkeep
+checkbbox/
+*.jpg
+test_evaluation/
+wandb/

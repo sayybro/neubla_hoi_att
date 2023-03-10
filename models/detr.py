@@ -313,11 +313,9 @@ def build(args):
     num_classes = 20 if args.dataset_file != 'coco' else 91
     if args.dataset_file == "coco_panoptic":
         num_classes = 250
-
     device = torch.device(args.device)
     backbone = build_backbone(args)
     transformer = build_transformer(args)
-    
     if args.mtl:
         if args.show_vid:
             num_classes,cost_class,num_obj_classes={},{},{}
